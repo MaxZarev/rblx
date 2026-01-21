@@ -8,7 +8,7 @@ local MIN_PLAYERS = 8  -- Minimum players in server
 local MAX_PLAYERS_ALLOWED = 12  -- Maximum players in server
 local TELEPORT_RETRY_DELAY = 8
 local TELEPORT_COOLDOWN = 30
-local SCRIPT_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/mm2_advertiser.lua"  -- UPDATE THIS!
+local SCRIPT_URL = "https://raw.githubusercontent.com/ivankodaria5-ai/reklamabot/refs/heads/main/reklama.lua"  -- UPDATE THIS!
 
 local MESSAGE_INTERVAL_MIN = 25  -- Minimum seconds between messages
 local MESSAGE_INTERVAL_MAX = 45  -- Maximum seconds between messages

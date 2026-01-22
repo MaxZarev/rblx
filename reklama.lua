@@ -11,18 +11,18 @@ local SCRIPT_URL = "https://raw.githubusercontent.com/ivankodaria5-ai/reklamabot
 
 -- Advertisement messages (English)
 local MESSAGES = {
-    "Best site to sell MM2 items - RBLX.PW",
-    "Got extra godlies? Sell them on RBLX.PW for real money",
+    "Best site to sell MM2 items - RBLX . PW",
+    "Got extra godlies? Sell them on RBLX PW for mon3y",
     "RBLX.PW - #1 marketplace for MM2 knives and guns",
-    "Sell your MM2 items safely on RBLX.PW",
-    "Trade MM2 godlies for cash at RBLX.PW",
-    "RBLX.PW - instant payouts for your MM2 items",
-    "Got duplicate godlies? Cash them out on RBLX.PW",
-    "Selling MM2 items? Check out RBLX.PW for best prices",
-    "RBLX.PW - trusted marketplace for MM2 trading",
-    "Turn your MM2 collection into cash at RBLX.PW",
-    "RBLX.PW - safe and fast MM2 item sales",
-    "Best prices for MM2 godlies at RBLX.PW"
+    "Sel your MM2 items safely on RBLX . PW",
+    "Trade MM2 godlies for cash at RBLX. PW",
+    "RBLX . PW - instant payouts for your MM2 items",
+    "Got duplicate godlies? Cash them out on RBLX . PW",
+    "SeIIing MM2 items? Check out RBLX.PW for best prices",
+    "RBLX.PW - tra sted mark etplace for MM2 trading",
+    "Turn your MM2 collection into cash at RBLX . PW",
+    "RBLX . PW - safe and fast MM2 item sales",
+    "Best pri ces for MM2 godlies at RBLX . PW"
 }
 
 -- ==================== SERVICES ====================
@@ -314,17 +314,17 @@ log("Character loaded!")
 local function advertiseLoop()
     local messagesToSend = 3  -- Always send 3 messages
     
-    log("[MAIN] Waiting 2 seconds after joining server...")
-    task.wait(2)  -- Wait after joining new server
+    log("[MAIN] Waiting 5 seconds after joining server...")
+    task.wait(5)  -- Wait after joining new server
     
     log("[MAIN] Sending " .. messagesToSend .. " messages then hopping...")
     
-    -- Send 3 random messages with 1 second delay between them
+    -- Send 3 random messages with 2 second delay between them
     for i = 1, messagesToSend do
         local message = MESSAGES[math.random(#MESSAGES)]
         log("[CHAT] Sending message " .. i .. "/" .. messagesToSend .. ": " .. message)
         sendChat(message)
-        task.wait(1)  -- 1 second delay between messages
+        task.wait(2)  -- 2 second delay between messages
     end
     
     log("[MAIN] All messages sent! Waiting 2 seconds before server hop...")

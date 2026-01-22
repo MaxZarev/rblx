@@ -314,14 +314,17 @@ log("Character loaded!")
 local function advertiseLoop()
     local messagesToSend = 3  -- Always send 3 messages
     
-    log("[MAIN] Sending " .. messagesToSend .. " messages immediately then hopping...")
+    log("[MAIN] Waiting 2 seconds after joining server...")
+    task.wait(2)  -- Wait after joining new server
     
-    -- Send 3 random messages immediately (no delay between them)
+    log("[MAIN] Sending " .. messagesToSend .. " messages then hopping...")
+    
+    -- Send 3 random messages with 1 second delay between them
     for i = 1, messagesToSend do
         local message = MESSAGES[math.random(#MESSAGES)]
         log("[CHAT] Sending message " .. i .. "/" .. messagesToSend .. ": " .. message)
         sendChat(message)
-        task.wait(0.5)  -- Small delay to ensure messages go through
+        task.wait(1)  -- 1 second delay between messages
     end
     
     log("[MAIN] All messages sent! Waiting 2 seconds before server hop...")

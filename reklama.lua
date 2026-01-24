@@ -40,8 +40,14 @@ local player = Players.LocalPlayer
 local httprequest = (syn and syn.request) or http and http.request or http_request or (fluxus and fluxus.request) or request
 local queueFunc = queueonteleport or queue_on_teleport or (syn and syn.queue_on_teleport) or function() print("[HOP] Queue not supported!") end
 
--- ==================== LOGGING ====================
+-- ==================== LOGGING & STATISTICS ====================
 local logLines = {}
+local stats = {
+    serversVisited = 0,
+    totalPlayersEncountered = 0,
+    startTime = os.time()
+}
+
 local function log(msg)
     local timestamp = os.date("[%Y-%m-%d %H:%M:%S]")
     local logMsg = timestamp .. " " .. msg
@@ -56,11 +62,44 @@ local function saveLog()
     end
 end
 
--- Auto-save log every 30 seconds
+local function saveStats()
+    if writefile then
+        local runTime = os.time() - stats.startTime
+        local hours = math.floor(runTime / 3600)
+        local minutes = math.floor((runTime % 3600) / 60)
+        
+        local statsContent = string.format(
+            "=== ADOPT ME BOT STATISTICS ===\n" ..
+            "Servers Visited: %d\n" ..
+            "Total Players Encountered: %d\n" ..
+            "Average Players per Server: %.1f\n" ..
+            "Runtime: %dh %dm\n" ..
+            "Last Updated: %s\n",
+            stats.serversVisited,
+            stats.totalPlayersEncountered,
+            stats.serversVisited > 0 and (stats.totalPlayersEncountered / stats.serversVisited) or 0,
+            hours, minutes,
+            os.date("%Y-%m-%d %H:%M:%S")
+        )
+        writefile("adoptme_stats.txt", statsContent)
+    end
+end
+
+local function logStats()
+    log(string.format(
+        "[STATS] Servers: %d | Total Players: %d | Avg: %.1f players/server",
+        stats.serversVisited,
+        stats.totalPlayersEncountered,
+        stats.serversVisited > 0 and (stats.totalPlayersEncountered / stats.serversVisited) or 0
+    ))
+end
+
+-- Auto-save log and stats every 30 seconds
 task.spawn(function()
     while true do
         task.wait(30)
         saveLog()
+        saveStats()
     end
 end)
 
@@ -138,6 +177,7 @@ end
 local function serverHop()
     log("[HOP] Starting server hop...")
     saveLog()
+    saveStats()  -- Save statistics before hopping
     
     -- Check if httprequest is available
     if not httprequest then
@@ -315,6 +355,7 @@ end
 -- ==================== MAIN LOOP ====================
 log("=== ADOPT ME CHAT ADVERTISER STARTED ===")
 log("=== ADVERTISING RBLX.PW ===")
+log("[STATS] Statistics tracking enabled - saving to adoptme_stats.txt")
 
 -- Wait for game to load (but don't wait for character in Adopt Me)
 log("Waiting for game to load...")
@@ -353,13 +394,19 @@ local function advertiseLoop()
     serverCount = serverCount + 1
     local messagesToSend = 3  -- Always send 3 messages
     
+    -- Update statistics
+    stats.serversVisited = stats.serversVisited + 1
+    local currentPlayers = #Players:GetPlayers()
+    stats.totalPlayersEncountered = stats.totalPlayersEncountered + currentPlayers
+    
     -- Every 3rd server: double delays and add dot prefix
     local isSlowServer = (serverCount % 3 == 0)
     local initialDelay = isSlowServer and 10 or 5  -- 10 sec on every 3rd server, 5 sec normally
     local messageDelay = isSlowServer and 4 or 2   -- 4 sec on every 3rd server, 2 sec normally
     local dotPrefix = isSlowServer and ". " or ""  -- Add dot on every 3rd server
     
-    log("[MAIN] Server #" .. serverCount .. (isSlowServer and " (SLOW MODE - 2x delays + dot)" or " (NORMAL MODE)"))
+    log("[MAIN] Server #" .. serverCount .. " | Players: " .. currentPlayers .. (isSlowServer and " (SLOW MODE - 2x delays + dot)" or " (NORMAL MODE)"))
+    logStats()  -- Show stats every server
     log("[MAIN] Waiting " .. initialDelay .. " seconds after joining server...")
     task.wait(initialDelay)
     

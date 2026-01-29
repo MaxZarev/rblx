@@ -98,7 +98,7 @@ function Tools.sendChat(msg)
 end
 
 -- Отправка сообщения через API сервер
-function Tools.sendMesaggeAPI(apiUrl, apiKey, message)
+function Tools.sendMessageAPI(apiUrl, apiKey, message)
     local HttpService = game:GetService("HttpService")
     local httprequest = http_request or request or syn.request
 

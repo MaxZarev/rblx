@@ -69,4 +69,30 @@ function Tools.clickPlayButton()
 end
 
 
+function ToolssendChat(msg)
+    task.spawn(function()  -- Запускаем в асинхронном потоке
+        -- TextChatService (новая система чата Roblox)
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then  -- Проверяем версию чата
+            local ch = TextChatService.TextChannels.RBXGeneral  -- Получаем общий канал
+            if ch then  -- Если канал найден
+                pcall(function()  -- Защищенный вызов (чтобы не крашнуть скрипт при ошибке)
+                    ch:SendAsync(msg)  -- Отправляем сообщение асинхронно
+                end)
+            end
+        end
+
+        -- Legacy chat fallback (старая система чата для обратной совместимости)
+        local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")  -- Ищем систему чата
+        if say then  -- Если нашли
+            say = say:FindFirstChild("SayMessageRequest")  -- Получаем event для отправки
+            if say then  -- Если event существует
+                pcall(function()  -- Защищенный вызов
+                    say:FireServer(msg, "All")  -- Отправляем на сервер (в канал "All")
+                end)
+            end
+        end
+    end)
+end
+
+
 return Tools

@@ -3,7 +3,7 @@ local PLACE_ID = 920587237  -- ID игры Adopt Me на платформе Robl
 local MIN_PLAYERS_PREFERRED = 5  -- Предпочтительное минимальное количество игроков на сервере
 local MIN_PLAYERS_FALLBACK = 3  -- Запасное минимальное количество, если поиск затягивается
 local MAX_PLAYERS_ALLOWED = 100  -- Максимальное количество игроков (принимаем почти любой сервер)
-local SEARCH_TIMEOUT = 60  -- Таймаут поиска в секундах, после которого снижаются требования
+local SEARCH_TIMEOUT = 20  -- Таймаут поиска в секундах, после которого снижаются требования
 local TELEPORT_COOLDOWN = 15  -- Задержка перед телепортацией (сокращенная)
 local SCRIPT_URL = "https://raw.githubusercontent.com/MaxZarev/rblx/refs/heads/main/use_tools.lua" 
 

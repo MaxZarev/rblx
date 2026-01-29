@@ -7,6 +7,21 @@ local playerGui = player:FindFirstChild("PlayerGui")
 
 local Tools = {}
 
+-- Ожидание появления кнопки PlayButton (максимум 60 секунд)
+function Tools.waitForPlayButton(timeout)
+    timeout = timeout or 60
+    local startTime = tick()
+
+    while tick() - startTime < timeout do
+        if Tools.isPlayButtonVisible() then
+            return true
+        end
+        task.wait(0.5)
+    end
+
+    return false
+end
+
 -- Проверка видимости кнопки PlayButton
 function Tools.isPlayButtonVisible()
     local newsApp = playerGui and playerGui:FindFirstChild("NewsApp")

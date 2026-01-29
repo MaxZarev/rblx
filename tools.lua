@@ -6,7 +6,8 @@ local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 
--- Универсальная HTTP функция для разных эксплоитов
+
+local queueFunc = queueonteleport
 local httprequest = http_request or http.request or request or (syn and syn.request)
 
 local player = Players.LocalPlayer
@@ -21,10 +22,11 @@ local Tools = {
     searchTimeout = 60,
     teleportCooldown = 15,
     placeId = 920587237,
+    scriptUrl = "",
 }
 
 -- Инициализация модуля с API параметрами
-function Tools.setup(apiUrl, apiKey, minPlayersPreferred, minPlayersFallback, maxPlayersAllowed, searchTimeout, teleportCooldown, placeId)
+function Tools.setup(apiUrl, apiKey, minPlayersPreferred, minPlayersFallback, maxPlayersAllowed, searchTimeout, teleportCooldown, placeId, scriptUrl)
     if apiUrl then Tools.apiUrl = apiUrl end
     if apiKey then Tools.apiKey = apiKey end
     if minPlayersPreferred then Tools.minPlayersPreferred = minPlayersPreferred end
@@ -33,6 +35,7 @@ function Tools.setup(apiUrl, apiKey, minPlayersPreferred, minPlayersFallback, ma
     if searchTimeout then Tools.searchTimeout = searchTimeout end
     if teleportCooldown then Tools.teleportCooldown = teleportCooldown end
     if placeId then Tools.placeId = placeId end
+    if scriptUrl then Tools.scriptUrl = scriptUrl end
     return Tools
 end
 
@@ -209,6 +212,7 @@ function Tools.serverHop()
 
                     -- Телепортация
                     local teleportSuccess = pcall(function()
+                        queueFunc('loadstring(game:HttpGet("' .. Tools.scriptUrl .. '"))()')
                         TeleportService:TeleportToPlaceInstance(Tools.placeId, serverId, player)
                     end)
 

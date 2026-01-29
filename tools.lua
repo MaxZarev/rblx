@@ -69,29 +69,62 @@ function Tools.clickPlayButton()
 end
 
 
-function ToolssendChat(msg)
+-- Отправка сообщения в чат Roblox (локально)
+function Tools.sendChat(msg)
     task.spawn(function()  -- Запускаем в асинхронном потоке
         -- TextChatService (новая система чата Roblox)
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then  -- Проверяем версию чата
-            local ch = TextChatService.TextChannels.RBXGeneral  -- Получаем общий канал
-            if ch then  -- Если канал найден
-                pcall(function()  -- Защищенный вызов (чтобы не крашнуть скрипт при ошибке)
-                    ch:SendAsync(msg)  -- Отправляем сообщение асинхронно
+        local TextChatService = game:GetService("TextChatService")
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local ch = TextChatService.TextChannels.RBXGeneral
+            if ch then
+                pcall(function()
+                    ch:SendAsync(msg)
                 end)
             end
         end
 
         -- Legacy chat fallback (старая система чата для обратной совместимости)
-        local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")  -- Ищем систему чата
-        if say then  -- Если нашли
-            say = say:FindFirstChild("SayMessageRequest")  -- Получаем event для отправки
-            if say then  -- Если event существует
-                pcall(function()  -- Защищенный вызов
-                    say:FireServer(msg, "All")  -- Отправляем на сервер (в канал "All")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+        if say then
+            say = say:FindFirstChild("SayMessageRequest")
+            if say then
+                pcall(function()
+                    say:FireServer(msg, "All")
                 end)
             end
         end
     end)
+end
+
+-- Отправка сообщения через API сервер
+function Tools.sendMesaggeAPI(apiUrl, apiKey, message)
+    local HttpService = game:GetService("HttpService")
+    local httprequest = http_request or request or syn.request
+
+    if not httprequest then
+        warn("HTTP request function not available")
+        return false
+    end
+
+    local success, result = pcall(function()
+        return httprequest({
+            Url = apiUrl .. "/send_chat?message=" .. HttpService:UrlEncode(message),
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and result.StatusCode == 200 then
+        print("✓ Сообщение отправлено через API")
+        return true
+    else
+        warn("✗ Ошибка отправки через API:", result and result.StatusCode or "unknown")
+        return false
+    end
 end
 
 

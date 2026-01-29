@@ -33,8 +33,16 @@ local API_KEY = Auth.getApiKey()
 Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MIN_PLAYERS_FALLBACK, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
 
 
-if Tools.waitForPlayButton() then
+if Tools.waitForPlayButton(20) then
     Tools.clickPlayButton()
+    Tools.sendMessageAPI("Клик по кнопке PlayButton выполнен успешно")
+else
+    Tools.sendMessageAPI("Кнопка PlayButton не найдена")
 end
 
+Tools.sendChat("Всем привет")
+task.wait(5)
+
 Tools.serverHop()
+
+task.wait(5)

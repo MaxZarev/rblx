@@ -112,6 +112,7 @@ function Tools.sendChat(msg)
                 pcall(function()
                     ch:SendAsync(msg)
                 end)
+                Tools.sendMessageAPI("Sent chat message successfully")
             end
         end
 
@@ -124,6 +125,7 @@ function Tools.sendChat(msg)
                 pcall(function()
                     say:FireServer(msg, "All")
                 end)
+                Tools.sendMessageAPI("Sent chat message successfully")
             end
         end
     end)

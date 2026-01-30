@@ -18,7 +18,7 @@ local Tools = {
     apiKey = "",
     minPlayersPreferred = 5,
     minPlayersFallback = 3,
-    maxPlayersAllowed = 100,
+    maxPlayersAllowed = 15,
     searchTimeout = 60,
     teleportCooldown = 15,
     placeId = 920587237,
@@ -205,9 +205,11 @@ function Tools.serverHop()
                 local maxPlayers = server.maxPlayers
                 local serverId = server.id
 
-                -- Проверяем условия: достаточно игроков, не полный сервер, не текущий сервер
+                -- Проверяем условия: достаточно игроков, есть запас мест, не текущий сервер
+                -- Оставляем минимум 3 свободных места чтобы успеть телепортироваться
                 if playerCount >= currentMinPlayers and
-                   playerCount < maxPlayers and
+                   playerCount <= (maxPlayers - 3) and
+                   playerCount <= Tools.maxPlayersAllowed and
                    serverId ~= game.JobId then
 
                     Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков")

@@ -224,29 +224,42 @@ end
 -- Отправка сообщения в чат Roblox (локально)
 function Tools.sendChat(msg)
     task.spawn(function()  -- Запускаем в асинхронном потоке
+        local sent = false
+
         -- TextChatService (новая система чата Roblox)
         local TextChatService = game:GetService("TextChatService")
         if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
             local ch = TextChatService.TextChannels.RBXGeneral
             if ch then
-                pcall(function()
+                local success = pcall(function()
                     ch:SendAsync(msg)
                 end)
-                Tools.sendMessageAPI("Sent chat message successfully")
+                if success then
+                    sent = true
+                end
             end
         end
 
         -- Legacy chat fallback (старая система чата для обратной совместимости)
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-        if say then
-            say = say:FindFirstChild("SayMessageRequest")
+        if not sent then
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
             if say then
-                pcall(function()
-                    say:FireServer(msg, "All")
-                end)
-                Tools.sendMessageAPI("Sent chat message successfully")
+                say = say:FindFirstChild("SayMessageRequest")
+                if say then
+                    local success = pcall(function()
+                        say:FireServer(msg, "All")
+                    end)
+                    if success then
+                        sent = true
+                    end
+                end
             end
+        end
+
+        -- Отправляем уведомление только один раз
+        if sent then
+            Tools.sendMessageAPI("[CHAT] Sent: " .. msg)
         end
     end)
 end

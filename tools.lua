@@ -537,6 +537,148 @@ function Tools.deactivateAdMessage(messageId)
     return success and response.StatusCode == 200
 end
 
+-- ============================================
+-- ФУНКЦИИ ДЛЯ ПАРСИНГА ЧАТА
+-- ============================================
+
+-- Получить последние сообщения из чата
+function Tools.getRecentChatMessages(count)
+    count = count or 10
+    local messages = {}
+
+    local TextChatService = game:GetService("TextChatService")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+    -- Пробуем получить из TextChatService (новый чат)
+    local success = pcall(function()
+        local generalChannel = TextChatService:FindFirstChild("TextChannels")
+        if generalChannel then
+            local rbxGeneral = generalChannel:FindFirstChild("RBXGeneral")
+            if rbxGeneral then
+                -- TextChatService хранит историю в MessageReceived
+                -- Но для получения уже отправленных сообщений нужен другой подход
+            end
+        end
+    end)
+
+    -- Для чтения последних сообщений используем ChatWindow из PlayerGui
+    local chatFrame = playerGui:FindFirstChild("Chat")
+    if not chatFrame then
+        -- Пробуем найти в новом чате
+        chatFrame = playerGui:FindFirstChild("ExperienceChat")
+    end
+
+    if chatFrame then
+        local function findScrollingFrame(parent)
+            for _, child in ipairs(parent:GetDescendants()) do
+                if child:IsA("ScrollingFrame") then
+                    return child
+                end
+            end
+            return nil
+        end
+
+        local scrollFrame = findScrollingFrame(chatFrame)
+        if scrollFrame then
+            local messageFrames = {}
+            for _, child in ipairs(scrollFrame:GetChildren()) do
+                if child:IsA("Frame") or child:IsA("TextLabel") then
+                    table.insert(messageFrames, child)
+                end
+            end
+
+            -- Сортируем по позиции Y (снизу вверх = новые сначала)
+            table.sort(messageFrames, function(a, b)
+                return a.AbsolutePosition.Y > b.AbsolutePosition.Y
+            end)
+
+            -- Извлекаем текст
+            for i = 1, math.min(count, #messageFrames) do
+                local frame = messageFrames[i]
+                local text = ""
+
+                -- Ищем TextLabel внутри фрейма
+                if frame:IsA("TextLabel") then
+                    text = frame.Text
+                else
+                    for _, descendant in ipairs(frame:GetDescendants()) do
+                        if descendant:IsA("TextLabel") and descendant.Text ~= "" then
+                            text = text .. descendant.Text .. " "
+                        end
+                    end
+                end
+
+                if text ~= "" then
+                    table.insert(messages, text)
+                end
+            end
+        end
+    end
+
+    return messages
+end
+
+-- Проверить, было ли сообщение зафильтровано (содержит много ###)
+function Tools.isMessageFiltered(messages, hashThreshold)
+    hashThreshold = hashThreshold or 3
+
+    for _, msg in ipairs(messages) do
+        -- Считаем количество последовательных #
+        local hashCount = 0
+        local maxConsecutive = 0
+
+        for i = 1, #msg do
+            local char = msg:sub(i, i)
+            if char == "#" then
+                hashCount = hashCount + 1
+                if hashCount > maxConsecutive then
+                    maxConsecutive = hashCount
+                end
+            else
+                hashCount = 0
+            end
+        end
+
+        if maxConsecutive > hashThreshold then
+            return true, msg
+        end
+    end
+
+    return false, nil
+end
+
+-- Проверить фильтрацию после отправки рекламы и деактивировать если нужно
+function Tools.checkAndDeactivateIfFiltered(adMessageId, waitTime)
+    waitTime = waitTime or 2
+
+    -- Ждем пока сообщение появится в чате
+    task.wait(waitTime)
+
+    -- Получаем последние 10 сообщений
+    local recentMessages = Tools.getRecentChatMessages(10)
+
+    -- Проверяем на фильтрацию
+    local wasFiltered, filteredMsg = Tools.isMessageFiltered(recentMessages, 3)
+
+    if wasFiltered then
+        Tools.sendMessageAPI("[FILTER] Обнаружена фильтрация: " .. (filteredMsg or "unknown"))
+
+        -- Деактивируем сообщение
+        if adMessageId then
+            local success = Tools.deactivateAdMessage(adMessageId)
+            if success then
+                Tools.sendMessageAPI("[FILTER] Сообщение ID:" .. adMessageId .. " деактивировано")
+            else
+                Tools.sendMessageAPI("[FILTER] Ошибка деактивации сообщения ID:" .. adMessageId)
+            end
+        end
+
+        return true
+    end
+
+    return false
+end
+
 
 function Tools.serverHop()
     if not httprequest then

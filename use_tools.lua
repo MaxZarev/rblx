@@ -84,6 +84,9 @@ local adData = Tools.getAdMessage()
 if adData then
     Tools.sendChat(adData.message)
     Tools.sendMessageAPI("[AD] ID: " .. adData.id)
+
+    -- Проверяем фильтрацию через 2 секунды
+    Tools.checkAndDeactivateIfFiltered(adData.id, 2)
 else
     Tools.sendChat("RBLX . PW - best Adopt Me marketplace")
     Tools.sendMessageAPI("[AD] Fallback")

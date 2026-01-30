@@ -229,7 +229,13 @@ function Tools.isAdoptionIslandButtonVisible()
 
     local dialog = dialogApp:FindFirstChild("Dialog")
     local spawnChooser = dialog and dialog:FindFirstChild("SpawnChooserDialog")
-    local upperCard = spawnChooser and spawnChooser:FindFirstChild("UpperCardContainer")
+
+    -- Проверяем, что окно SpawnChooser видимо (аналогично newsApp.Enabled для Play)
+    if not spawnChooser or not spawnChooser.Visible then
+        return false
+    end
+
+    local upperCard = spawnChooser:FindFirstChild("UpperCardContainer")
     local choicesContent = upperCard and upperCard:FindFirstChild("ChoicesContent")
     local choices = choicesContent and choicesContent:FindFirstChild("Choices")
     local adoptionIsland = choices and choices:FindFirstChild("Adoption Island")
@@ -262,7 +268,13 @@ function Tools.clickAdoptionIslandButton()
 
     local dialog = dialogApp:FindFirstChild("Dialog")
     local spawnChooser = dialog and dialog:FindFirstChild("SpawnChooserDialog")
-    local upperCard = spawnChooser and spawnChooser:FindFirstChild("UpperCardContainer")
+
+    -- Проверяем, что окно SpawnChooser видимо
+    if not spawnChooser or not spawnChooser.Visible then
+        return false, "Окно выбора локации не открыто"
+    end
+
+    local upperCard = spawnChooser:FindFirstChild("UpperCardContainer")
     local choicesContent = upperCard and upperCard:FindFirstChild("ChoicesContent")
     local choices = choicesContent and choicesContent:FindFirstChild("Choices")
     local adoptionIsland = choices and choices:FindFirstChild("Adoption Island")

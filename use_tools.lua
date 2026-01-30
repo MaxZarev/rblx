@@ -27,8 +27,8 @@ local MESSAGES = {
 
 
 
-local Tools = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/tools.lua"))()
-local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/auth.lua"))()
+local Tools = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/tools.lua" .. tick()))()
+local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/auth.lua" .. tick()))()
 
 
 local API_KEY = Auth.getApiKey()

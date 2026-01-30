@@ -37,10 +37,6 @@ Tools.sendMessageAPI("Скрипт запущен")
 -- Подключаем слушатель чата сразу при старте (чтобы собирать сообщения)
 Tools.connectChatListener()
 
--- Ждем пока бот будет включен
-while not Tools.isEnabled() do
-    task.wait(1)
-end
 
 randomWait(3, 7)
 
@@ -57,6 +53,17 @@ if Tools.waitForPlayButton(20) then
 else
     Tools.sendMessageAPI("PlayButton не найден")
 end
+
+
+if Tools.waitForAdoptionIslandButton(20) then
+    local success, message = Tools.clickAdoptionIslandButton()
+    if success then
+        Tools.sendMessageAPI("Клик по кнопке Adoption Island выполнен успешно")
+    else
+        Tools.sendMessageAPI("Клик по кнопке Adoption Island не выполнен")
+    end
+end
+
 
 -- Проверяем перед выполнением действия
 if not Tools.isEnabled() then

@@ -220,6 +220,73 @@ function Tools.clickPlayButton()
     return true
 end
 
+-- Проверка наличия кнопки Adoption Island
+function Tools.isAdoptionIslandButtonVisible()
+    local dialogApp = playerGui and playerGui:FindFirstChild("DialogApp")
+    if not dialogApp then
+        return false
+    end
+
+    local dialog = dialogApp:FindFirstChild("Dialog")
+    local spawnChooser = dialog and dialog:FindFirstChild("SpawnChooserDialog")
+    local upperCard = spawnChooser and spawnChooser:FindFirstChild("UpperCardContainer")
+    local choicesContent = upperCard and upperCard:FindFirstChild("ChoicesContent")
+    local choices = choicesContent and choicesContent:FindFirstChild("Choices")
+    local adoptionIsland = choices and choices:FindFirstChild("Adoption Island")
+    local button = adoptionIsland and adoptionIsland:FindFirstChild("Button")
+
+    return button ~= nil and button.Visible
+end
+
+-- Ожидание появления кнопки Adoption Island
+function Tools.waitForAdoptionIslandButton(timeout)
+    timeout = timeout or 30
+    local startTime = tick()
+
+    while tick() - startTime < timeout do
+        if Tools.isAdoptionIslandButtonVisible() then
+            return true
+        end
+        task.wait(0.5)
+    end
+
+    return false
+end
+
+-- Клик по кнопке Adoption Island
+function Tools.clickAdoptionIslandButton()
+    local dialogApp = playerGui and playerGui:FindFirstChild("DialogApp")
+    if not dialogApp then
+        return false, "DialogApp не найден"
+    end
+
+    local dialog = dialogApp:FindFirstChild("Dialog")
+    local spawnChooser = dialog and dialog:FindFirstChild("SpawnChooserDialog")
+    local upperCard = spawnChooser and spawnChooser:FindFirstChild("UpperCardContainer")
+    local choicesContent = upperCard and upperCard:FindFirstChild("ChoicesContent")
+    local choices = choicesContent and choicesContent:FindFirstChild("Choices")
+    local adoptionIsland = choices and choices:FindFirstChild("Adoption Island")
+    local button = adoptionIsland and adoptionIsland:FindFirstChild("Button")
+
+    if not button or not button.Visible then
+        return false, "Кнопка Adoption Island не найдена или не видима"
+    end
+
+    -- Кликаем по центру кнопки
+    local absolutePos = button.AbsolutePosition
+    local absoluteSize = button.AbsoluteSize
+    local guiInset = GuiService:GetGuiInset()
+
+    local centerX = absolutePos.X + absoluteSize.X / 2
+    local centerY = absolutePos.Y + absoluteSize.Y / 2 + guiInset.Y
+
+    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+    task.wait(0.05)
+    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+
+    return true, "Клик по кнопке Adoption Island выполнен"
+end
+
 
 -- Отправка сообщения в чат Roblox (локально)
 function Tools.sendChat(msg)

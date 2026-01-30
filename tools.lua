@@ -23,7 +23,123 @@ local Tools = {
     teleportCooldown = 15,
     placeId = 920587237,
     scriptUrl = "",
+    enabled = true,  -- Состояние скрипта (включен/выключен)
+    gui = nil,       -- Ссылка на GUI элемент
 }
+
+-- Создание GUI с переключателем On/Off
+function Tools.createToggleGUI()
+    -- Удаляем старый GUI если существует
+    local oldGui = playerGui:FindFirstChild("BotToggleGUI")
+    if oldGui then
+        oldGui:Destroy()
+    end
+
+    -- Создаем ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BotToggleGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    -- Создаем Frame (фон)
+    local frame = Instance.new("Frame")
+    frame.Name = "ToggleFrame"
+    frame.Size = UDim2.new(0, 150, 0, 60)
+    frame.Position = UDim2.new(0, 10, 1, -70)  -- Слева снизу
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.Parent = screenGui
+
+    -- Скругленные углы
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    -- Текст "Bot Status"
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Position = UDim2.new(0, 0, 0, 5)
+    label.BackgroundTransparency = 1
+    label.Text = "Bot Status"
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.Parent = frame
+
+    -- Кнопка переключения
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(0, 130, 0, 25)
+    toggleButton.Position = UDim2.new(0, 10, 0, 28)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  -- Зеленый (ON)
+    toggleButton.Text = "ON"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextSize = 16
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.Parent = frame
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = toggleButton
+
+    -- Обработчик клика
+    toggleButton.MouseButton1Click:Connect(function()
+        Tools.enabled = not Tools.enabled
+
+        if Tools.enabled then
+            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  -- Зеленый
+            toggleButton.Text = "ON"
+            Tools.sendMessageAPI("[GUI] Bot включен")
+        else
+            toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)  -- Красный
+            toggleButton.Text = "OFF"
+            Tools.sendMessageAPI("[GUI] Bot выключен")
+        end
+    end)
+
+    -- Делаем фрейм перетаскиваемым
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement and dragStart and startPos then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    screenGui.Parent = playerGui
+    Tools.gui = screenGui
+
+    return screenGui
+end
+
+-- Проверка, включен ли бот
+function Tools.isEnabled()
+    return Tools.enabled
+end
 
 -- Инициализация модуля с API параметрами
 function Tools.setup(apiUrl, apiKey, minPlayersPreferred, minPlayersFallback, maxPlayersAllowed, searchTimeout, teleportCooldown, placeId, scriptUrl)
@@ -36,6 +152,10 @@ function Tools.setup(apiUrl, apiKey, minPlayersPreferred, minPlayersFallback, ma
     if teleportCooldown then Tools.teleportCooldown = teleportCooldown end
     if placeId then Tools.placeId = placeId end
     if scriptUrl then Tools.scriptUrl = scriptUrl end
+
+    -- Создаем GUI
+    Tools.createToggleGUI()
+
     return Tools
 end
 
@@ -171,9 +291,16 @@ function Tools.serverHop()
     local pagesChecked = 0
     local searchStartTime = tick()
     local currentMinPlayers = Tools.minPlayersPreferred
+    local consecutiveRateLimits = 0
     Tools.sendMessageAPI("[HOP] Ищу серверы с " .. currentMinPlayers .. "+ игроков...")
 
     while pagesChecked < maxPages do
+        -- Проверяем, включен ли бот
+        if not Tools.isEnabled() then
+            Tools.sendMessageAPI("[HOP] Остановлено пользователем")
+            return false
+        end
+
         -- Проверяем таймаут
         local elapsedTime = tick() - searchStartTime
         if elapsedTime > Tools.searchTimeout and currentMinPlayers ~= Tools.minPlayersFallback then
@@ -197,6 +324,7 @@ function Tools.serverHop()
         end)
 
         if success and response.StatusCode == 200 then
+            consecutiveRateLimits = 0 -- Сброс счетчика при успешном запросе
             local data = HttpService:JSONDecode(response.Body)
 
             -- Ищем подходящий сервер
@@ -236,7 +364,24 @@ function Tools.serverHop()
                 Tools.sendMessageAPI("[HOP] Больше нет страниц, серверы не найдены")
                 return false
             end
+        elseif success and response.StatusCode == 429 then
+            -- Обработка rate limit с exponential backoff
+            consecutiveRateLimits = consecutiveRateLimits + 1
+            local waitTime = math.min(10 * (2 ^ (consecutiveRateLimits - 1)), 120) -- От 10 до 120 секунд
+            Tools.sendMessageAPI(string.format("[HOP] Rate limit (429). Жду %d сек...", waitTime))
+
+            -- Ждем с проверкой состояния бота каждую секунду
+            for _ = 1, waitTime do
+                if not Tools.isEnabled() then
+                    Tools.sendMessageAPI("[HOP] Остановлено пользователем во время ожидания")
+                    return false
+                end
+                task.wait(1)
+            end
+
+            pagesChecked = pagesChecked - 1 -- Повторяем эту же страницу
         else
+            consecutiveRateLimits = 0
             Tools.sendMessageAPI("[HOP] Ошибка HTTP: " .. (response and response.StatusCode or "unknown"))
             task.wait(5)
         end

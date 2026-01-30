@@ -73,7 +73,13 @@ if not Tools.isEnabled() then
 end
 
 task.wait(5)
-Tools.sendChat("Всем привет")
+
+-- Выбираем случайное сообщение из списка
+local randomIndex = math.random(1, #MESSAGES)
+local randomMessage = MESSAGES[randomIndex]
+Tools.sendChat(randomMessage)
+Tools.sendMessageAPI("[AD] Выбрано сообщение #" .. randomIndex)
+
 task.wait(5)
 
 -- Проверяем перед выполнением действия

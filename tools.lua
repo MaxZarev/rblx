@@ -546,73 +546,95 @@ function Tools.getRecentChatMessages(count)
     count = count or 10
     local messages = {}
 
-    local TextChatService = game:GetService("TextChatService")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    Tools.sendMessageAPI("[CHAT_PARSE] Начинаю парсинг чата...")
 
-    -- Пробуем получить из TextChatService (новый чат)
-    local success = pcall(function()
-        local generalChannel = TextChatService:FindFirstChild("TextChannels")
-        if generalChannel then
-            local rbxGeneral = generalChannel:FindFirstChild("RBXGeneral")
-            if rbxGeneral then
-                -- TextChatService хранит историю в MessageReceived
-                -- Но для получения уже отправленных сообщений нужен другой подход
-            end
-        end
-    end)
+    -- Выводим список всех GUI в PlayerGui для диагностики
+    local guiList = {}
+    for _, child in ipairs(playerGui:GetChildren()) do
+        table.insert(guiList, child.Name)
+    end
+    Tools.sendMessageAPI("[CHAT_PARSE] GUI в PlayerGui: " .. table.concat(guiList, ", "))
 
     -- Для чтения последних сообщений используем ChatWindow из PlayerGui
     local chatFrame = playerGui:FindFirstChild("Chat")
-    if not chatFrame then
-        -- Пробуем найти в новом чате
-        chatFrame = playerGui:FindFirstChild("ExperienceChat")
+    if chatFrame then
+        Tools.sendMessageAPI("[CHAT_PARSE] Найден Chat (legacy)")
     end
 
-    if chatFrame then
-        local function findScrollingFrame(parent)
-            for _, child in ipairs(parent:GetDescendants()) do
-                if child:IsA("ScrollingFrame") then
-                    return child
-                end
-            end
-            return nil
+    if not chatFrame then
+        chatFrame = playerGui:FindFirstChild("ExperienceChat")
+        if chatFrame then
+            Tools.sendMessageAPI("[CHAT_PARSE] Найден ExperienceChat (новый)")
         end
+    end
 
-        local scrollFrame = findScrollingFrame(chatFrame)
-        if scrollFrame then
-            local messageFrames = {}
-            for _, child in ipairs(scrollFrame:GetChildren()) do
-                if child:IsA("Frame") or child:IsA("TextLabel") then
-                    table.insert(messageFrames, child)
-                end
-            end
-
-            -- Сортируем по позиции Y (снизу вверх = новые сначала)
-            table.sort(messageFrames, function(a, b)
-                return a.AbsolutePosition.Y > b.AbsolutePosition.Y
-            end)
-
-            -- Извлекаем текст
-            for i = 1, math.min(count, #messageFrames) do
-                local frame = messageFrames[i]
-                local text = ""
-
-                -- Ищем TextLabel внутри фрейма
-                if frame:IsA("TextLabel") then
-                    text = frame.Text
-                else
-                    for _, descendant in ipairs(frame:GetDescendants()) do
-                        if descendant:IsA("TextLabel") and descendant.Text ~= "" then
-                            text = text .. descendant.Text .. " "
-                        end
-                    end
-                end
-
-                if text ~= "" then
-                    table.insert(messages, text)
-                end
+    if not chatFrame then
+        -- Пробуем найти любой GUI содержащий "chat" в имени
+        for _, child in ipairs(playerGui:GetChildren()) do
+            if string.lower(child.Name):find("chat") then
+                chatFrame = child
+                Tools.sendMessageAPI("[CHAT_PARSE] Найден альтернативный чат: " .. child.Name)
+                break
             end
         end
+    end
+
+    if not chatFrame then
+        Tools.sendMessageAPI("[CHAT_PARSE] ОШИБКА: Чат GUI не найден!")
+        return messages
+    end
+
+    -- Рекурсивно ищем все TextLabel
+    local function findAllTextLabels(parent, depth)
+        depth = depth or 0
+        local labels = {}
+
+        for _, child in ipairs(parent:GetChildren()) do
+            if child:IsA("TextLabel") and child.Text and child.Text ~= "" then
+                table.insert(labels, {
+                    text = child.Text,
+                    name = child.Name,
+                    y = child.AbsolutePosition.Y,
+                    path = child:GetFullName()
+                })
+            end
+
+            -- Рекурсивно ищем в детях
+            if depth < 10 then
+                local childLabels = findAllTextLabels(child, depth + 1)
+                for _, label in ipairs(childLabels) do
+                    table.insert(labels, label)
+                end
+            end
+        end
+
+        return labels
+    end
+
+    local allLabels = findAllTextLabels(chatFrame, 0)
+    Tools.sendMessageAPI("[CHAT_PARSE] Найдено TextLabel: " .. #allLabels)
+
+    -- Сортируем по Y позиции (новые сообщения обычно внизу)
+    table.sort(allLabels, function(a, b)
+        return a.y > b.y
+    end)
+
+    -- Берем последние count сообщений
+    for i = 1, math.min(count, #allLabels) do
+        local label = allLabels[i]
+        table.insert(messages, label.text)
+    end
+
+    -- Логируем найденные сообщения
+    if #messages > 0 then
+        Tools.sendMessageAPI("[CHAT_PARSE] Последние " .. #messages .. " сообщений:")
+        for i, msg in ipairs(messages) do
+            -- Обрезаем длинные сообщения для логов
+            local shortMsg = #msg > 50 and (msg:sub(1, 50) .. "...") or msg
+            Tools.sendMessageAPI("[CHAT_PARSE] " .. i .. ": " .. shortMsg)
+        end
+    else
+        Tools.sendMessageAPI("[CHAT_PARSE] Сообщения не найдены!")
     end
 
     return messages
@@ -622,7 +644,9 @@ end
 function Tools.isMessageFiltered(messages, hashThreshold)
     hashThreshold = hashThreshold or 3
 
-    for _, msg in ipairs(messages) do
+    Tools.sendMessageAPI("[FILTER_CHECK] Проверяю " .. #messages .. " сообщений на фильтрацию (порог: " .. hashThreshold .. "+ символов #)")
+
+    for idx, msg in ipairs(messages) do
         -- Считаем количество последовательных #
         local hashCount = 0
         local maxConsecutive = 0
@@ -639,11 +663,17 @@ function Tools.isMessageFiltered(messages, hashThreshold)
             end
         end
 
+        if maxConsecutive > 0 then
+            Tools.sendMessageAPI("[FILTER_CHECK] Сообщение " .. idx .. " содержит " .. maxConsecutive .. " подряд символов #")
+        end
+
         if maxConsecutive > hashThreshold then
+            Tools.sendMessageAPI("[FILTER_CHECK] ОБНАРУЖЕНА ФИЛЬТРАЦИЯ в сообщении " .. idx)
             return true, msg
         end
     end
 
+    Tools.sendMessageAPI("[FILTER_CHECK] Фильтрация не обнаружена")
     return false, nil
 end
 
@@ -651,29 +681,41 @@ end
 function Tools.checkAndDeactivateIfFiltered(adMessageId, waitTime)
     waitTime = waitTime or 2
 
+    Tools.sendMessageAPI("[FILTER] Начинаю проверку фильтрации для ID:" .. tostring(adMessageId) .. ", жду " .. waitTime .. " сек...")
+
     -- Ждем пока сообщение появится в чате
     task.wait(waitTime)
 
     -- Получаем последние 10 сообщений
     local recentMessages = Tools.getRecentChatMessages(10)
 
+    Tools.sendMessageAPI("[FILTER] Получено сообщений для анализа: " .. #recentMessages)
+
+    if #recentMessages == 0 then
+        Tools.sendMessageAPI("[FILTER] ПРЕДУПРЕЖДЕНИЕ: Не удалось получить сообщения из чата!")
+        return false
+    end
+
     -- Проверяем на фильтрацию
     local wasFiltered, filteredMsg = Tools.isMessageFiltered(recentMessages, 3)
 
     if wasFiltered then
-        Tools.sendMessageAPI("[FILTER] Обнаружена фильтрация: " .. (filteredMsg or "unknown"))
+        Tools.sendMessageAPI("[FILTER] !!! ФИЛЬТРАЦИЯ ОБНАРУЖЕНА !!!")
+        Tools.sendMessageAPI("[FILTER] Зафильтрованное сообщение: " .. (filteredMsg or "unknown"))
 
         -- Деактивируем сообщение
         if adMessageId then
             local success = Tools.deactivateAdMessage(adMessageId)
             if success then
-                Tools.sendMessageAPI("[FILTER] Сообщение ID:" .. adMessageId .. " деактивировано")
+                Tools.sendMessageAPI("[FILTER] Сообщение ID:" .. adMessageId .. " ДЕАКТИВИРОВАНО")
             else
-                Tools.sendMessageAPI("[FILTER] Ошибка деактивации сообщения ID:" .. adMessageId)
+                Tools.sendMessageAPI("[FILTER] ОШИБКА деактивации сообщения ID:" .. adMessageId)
             end
         end
 
         return true
+    else
+        Tools.sendMessageAPI("[FILTER] Сообщение прошло без фильтрации")
     end
 
     return false

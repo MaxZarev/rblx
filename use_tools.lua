@@ -34,6 +34,9 @@ Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MIN_PLAYERS_FALLBACK, MAX_P
 
 Tools.sendMessageAPI("Скрипт запущен")
 
+-- Подключаем слушатель чата сразу при старте (чтобы собирать сообщения)
+Tools.connectChatListener()
+
 -- Ждем пока бот будет включен
 while not Tools.isEnabled() do
     task.wait(1)

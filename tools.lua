@@ -292,7 +292,7 @@ function Tools.serverHop()
     local searchStartTime = tick()
     local currentMinPlayers = Tools.minPlayersPreferred
     local consecutiveRateLimits = 0
-    Tools.sendMessageAPI("[HOP] Ищу серверы с " .. currentMinPlayers .. "+ игроков...")
+    Tools.sendMessageAPI("[HOP] Ищу серверы с " .. currentMinPlayers .. "+ игроков. Максимальное количество игроков: " .. Tools.maxPlayersAllowed)
 
     while pagesChecked < maxPages do
         -- Проверяем, включен ли бот
@@ -326,6 +326,8 @@ function Tools.serverHop()
         if success and response.StatusCode == 200 then
             consecutiveRateLimits = 0 -- Сброс счетчика при успешном запросе
             local data = HttpService:JSONDecode(response.Body)
+
+            Tools.sendMessageAPI("[HOP] Данные: " .. HttpService:JSONEncode(data))
 
             -- Ищем подходящий сервер
             for _, server in pairs(data.data) do

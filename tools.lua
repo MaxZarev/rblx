@@ -27,6 +27,16 @@ local Tools = {
     gui = nil,       -- Ссылка на GUI элемент
 }
 
+-- Перемешивание массива (алгоритм Фишера-Йетса)
+local function shuffleArray(arr)
+    local n = #arr
+    for i = n, 2, -1 do
+        local j = math.random(1, i)
+        arr[i], arr[j] = arr[j], arr[i]
+    end
+    return arr
+end
+
 -- Создание GUI с переключателем On/Off
 function Tools.createToggleGUI()
     -- Удаляем старый GUI если существует
@@ -881,8 +891,11 @@ function Tools.serverHop()
             consecutiveRateLimits = 0 -- Сброс счетчика при успешном запросе
             local data = HttpService:JSONDecode(response.Body)
 
+            -- Перемешиваем серверы для случайного порядка (чтобы параллельные скрипты не выбирали один сервер)
+            local servers = shuffleArray(data.data)
+
             -- Ищем подходящий сервер
-            for _, server in pairs(data.data) do
+            for _, server in ipairs(servers) do
                 local playerCount = server.playing
                 local maxPlayers = server.maxPlayers
                 local serverId = server.id

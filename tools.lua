@@ -429,6 +429,84 @@ function Tools.clearCursor(placeId)
     return success and response.StatusCode == 200
 end
 
+-- ============================================
+-- ФУНКЦИИ ДЛЯ РАБОТЫ С РЕКЛАМНЫМИ СООБЩЕНИЯМИ
+-- ============================================
+
+-- Получить рекламное сообщение из базы
+function Tools.getAdMessage()
+    if not httprequest then
+        warn("[AD] HTTP функция недоступна!")
+        return nil
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/messages/get",
+            Method = "GET",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(response.Body)
+        end)
+
+        if ok and data.success then
+            return {
+                id = data.id,
+                message = data.message
+            }
+        end
+    end
+
+    return nil
+end
+
+-- Отметить сообщение как использованное (запускает период остывания)
+function Tools.markAdMessageUsed(messageId)
+    if not httprequest then
+        return false
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/messages/used/" .. tostring(messageId),
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    return success and response.StatusCode == 200
+end
+
+-- Деактивировать сообщение (если заблокировано фильтром)
+function Tools.deactivateAdMessage(messageId)
+    if not httprequest then
+        return false
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/messages/deactivate/" .. tostring(messageId),
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    return success and response.StatusCode == 200
+end
+
 
 function Tools.serverHop()
     if not httprequest then

@@ -312,7 +312,7 @@ function Tools.serverHop()
         task.wait(5)
 
         local url = string.format(
-            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100%s",
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s",
             Tools.placeId,
             cursor ~= "" and "&cursor=" .. cursor or ""
         )
@@ -327,8 +327,6 @@ function Tools.serverHop()
             consecutiveRateLimits = 0 -- Сброс счетчика при успешном запросе
             local data = HttpService:JSONDecode(response.Body)
 
-            Tools.sendMessageAPI("[HOP] Данные: " .. HttpService:JSONEncode(data))
-
             -- Ищем подходящий сервер
             for _, server in pairs(data.data) do
                 local playerCount = server.playing
@@ -336,13 +334,14 @@ function Tools.serverHop()
                 local serverId = server.id
 
                 -- Проверяем условия: достаточно игроков, есть запас мест, не текущий сервер
-                -- Оставляем минимум 3 свободных места чтобы успеть телепортироваться
+                -- Оставляем минимум 5 свободных мест для надежной телепортации
+                local freeSlots = maxPlayers - playerCount
                 if playerCount >= currentMinPlayers and
-                   playerCount <= (maxPlayers - 3) and
+                   freeSlots >= 5 and
                    playerCount <= Tools.maxPlayersAllowed and
                    serverId ~= game.JobId then
 
-                    Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков")
+                    Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков (свободно: " .. freeSlots .. ")")
 
                     -- Телепортация
                     local teleportSuccess = pcall(function()

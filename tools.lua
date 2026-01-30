@@ -449,10 +449,12 @@ function Tools.serverHop()
     local savedCursor = Tools.getSavedCursor(Tools.placeId)
     local cursor = ""
     local pagesChecked = 0
+    local lastSavedCursor = ""  -- Отслеживаем последний сохраненный курсор
 
     if savedCursor then
         cursor = savedCursor.cursor
         pagesChecked = savedCursor.pageNumber
+        lastSavedCursor = cursor
         Tools.sendMessageAPI("[HOP] Продолжаю с сохраненной страницы " .. (pagesChecked + 1))
     else
         Tools.sendMessageAPI("[HOP] Начинаю с первой страницы")
@@ -518,10 +520,11 @@ function Tools.serverHop()
                     -- Отмечаем сервер как посещенный
                     Tools.markServerVisited(serverId, tostring(player.UserId), Tools.placeId)
 
-                    -- Сохраняем текущий курсор перед телепортацией
-                    if cursor ~= "" then
+                    -- Сохраняем текущий курсор перед телепортацией только если он изменился
+                    if cursor ~= "" and cursor ~= lastSavedCursor then
                         Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
                         Tools.sendMessageAPI("[HOP] Курсор сохранен для следующего запуска")
+                        lastSavedCursor = cursor
                     end
 
                     -- Телепортация
@@ -545,14 +548,18 @@ function Tools.serverHop()
             -- Обновляем курсор для следующей страницы
             if data.nextPageCursor then
                 cursor = data.nextPageCursor
-                -- Сохраняем курсор для следующей попытки
-                Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
+                -- Сохраняем курсор для следующей попытки только если он изменился
+                if cursor ~= lastSavedCursor then
+                    Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
+                    lastSavedCursor = cursor
+                end
             else
                 -- Достигли конца, начинаем заново
                 Tools.sendMessageAPI("[HOP] Достигнут конец списка, начинаю с начала")
                 Tools.clearCursor(Tools.placeId)
                 cursor = ""
                 pagesChecked = 0
+                lastSavedCursor = ""
             end
         elseif success and response.StatusCode == 429 then
             -- Обработка rate limit с exponential backoff

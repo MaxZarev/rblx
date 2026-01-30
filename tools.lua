@@ -541,100 +541,113 @@ end
 -- ФУНКЦИИ ДЛЯ ПАРСИНГА ЧАТА
 -- ============================================
 
--- Получить последние сообщения из чата
-function Tools.getRecentChatMessages(count)
-    count = count or 10
-    local messages = {}
+-- Буфер для хранения последних сообщений чата
+Tools.chatMessageBuffer = {}
+Tools.chatBufferMaxSize = 50
+Tools.chatListenerConnected = false
 
-    Tools.sendMessageAPI("[CHAT_PARSE] Начинаю парсинг чата...")
-
-    -- Выводим список всех GUI в PlayerGui для диагностики
-    local guiList = {}
-    for _, child in ipairs(playerGui:GetChildren()) do
-        table.insert(guiList, child.Name)
-    end
-    Tools.sendMessageAPI("[CHAT_PARSE] GUI в PlayerGui: " .. table.concat(guiList, ", "))
-
-    -- Для чтения последних сообщений используем ChatWindow из PlayerGui
-    local chatFrame = playerGui:FindFirstChild("Chat")
-    if chatFrame then
-        Tools.sendMessageAPI("[CHAT_PARSE] Найден Chat (legacy)")
+-- Подключить слушатель чата (вызывается один раз)
+function Tools.connectChatListener()
+    if Tools.chatListenerConnected then
+        return true
     end
 
-    if not chatFrame then
-        chatFrame = playerGui:FindFirstChild("ExperienceChat")
-        if chatFrame then
-            Tools.sendMessageAPI("[CHAT_PARSE] Найден ExperienceChat (новый)")
-        end
-    end
+    local TextChatService = game:GetService("TextChatService")
 
-    if not chatFrame then
-        -- Пробуем найти любой GUI содержащий "chat" в имени
-        for _, child in ipairs(playerGui:GetChildren()) do
-            if string.lower(child.Name):find("chat") then
-                chatFrame = child
-                Tools.sendMessageAPI("[CHAT_PARSE] Найден альтернативный чат: " .. child.Name)
-                break
+    -- Пробуем подключиться к TextChatService (новый чат Roblox)
+    local success = pcall(function()
+        local channels = TextChatService:WaitForChild("TextChannels", 5)
+        if channels then
+            local rbxGeneral = channels:FindFirstChild("RBXGeneral")
+            if rbxGeneral then
+                rbxGeneral.MessageReceived:Connect(function(textChatMessage)
+                    local messageText = textChatMessage.Text or ""
+                    local senderName = "Unknown"
+
+                    if textChatMessage.TextSource then
+                        local senderId = textChatMessage.TextSource.UserId
+                        local senderPlayer = Players:GetPlayerByUserId(senderId)
+                        if senderPlayer then
+                            senderName = senderPlayer.Name
+                        end
+                    end
+
+                    -- Добавляем в буфер
+                    table.insert(Tools.chatMessageBuffer, 1, {
+                        text = messageText,
+                        sender = senderName,
+                        timestamp = os.time()
+                    })
+
+                    -- Ограничиваем размер буфера
+                    while #Tools.chatMessageBuffer > Tools.chatBufferMaxSize do
+                        table.remove(Tools.chatMessageBuffer)
+                    end
+                end)
+
+                Tools.chatListenerConnected = true
+                Tools.sendMessageAPI("[CHAT_LISTENER] Подключен к RBXGeneral (TextChatService)")
+                return
             end
         end
-    end
-
-    if not chatFrame then
-        Tools.sendMessageAPI("[CHAT_PARSE] ОШИБКА: Чат GUI не найден!")
-        return messages
-    end
-
-    -- Рекурсивно ищем все TextLabel
-    local function findAllTextLabels(parent, depth)
-        depth = depth or 0
-        local labels = {}
-
-        for _, child in ipairs(parent:GetChildren()) do
-            if child:IsA("TextLabel") and child.Text and child.Text ~= "" then
-                table.insert(labels, {
-                    text = child.Text,
-                    name = child.Name,
-                    y = child.AbsolutePosition.Y,
-                    path = child:GetFullName()
-                })
-            end
-
-            -- Рекурсивно ищем в детях
-            if depth < 10 then
-                local childLabels = findAllTextLabels(child, depth + 1)
-                for _, label in ipairs(childLabels) do
-                    table.insert(labels, label)
-                end
-            end
-        end
-
-        return labels
-    end
-
-    local allLabels = findAllTextLabels(chatFrame, 0)
-    Tools.sendMessageAPI("[CHAT_PARSE] Найдено TextLabel: " .. #allLabels)
-
-    -- Сортируем по Y позиции (новые сообщения обычно внизу)
-    table.sort(allLabels, function(a, b)
-        return a.y > b.y
     end)
 
-    -- Берем последние count сообщений
-    for i = 1, math.min(count, #allLabels) do
-        local label = allLabels[i]
-        table.insert(messages, label.text)
+    -- Fallback: Legacy chat system
+    if not Tools.chatListenerConnected then
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local chatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+
+        if chatEvents then
+            local onMessage = chatEvents:FindFirstChild("OnMessageDoneFiltering")
+            if onMessage then
+                onMessage.OnClientEvent:Connect(function(messageData)
+                    local messageText = messageData.Message or messageData.FilteredMessage or ""
+                    local senderName = messageData.FromSpeaker or "Unknown"
+
+                    table.insert(Tools.chatMessageBuffer, 1, {
+                        text = messageText,
+                        sender = senderName,
+                        timestamp = os.time()
+                    })
+
+                    while #Tools.chatMessageBuffer > Tools.chatBufferMaxSize do
+                        table.remove(Tools.chatMessageBuffer)
+                    end
+                end)
+
+                Tools.chatListenerConnected = true
+                Tools.sendMessageAPI("[CHAT_LISTENER] Подключен к LegacyChat")
+            end
+        end
     end
 
-    -- Логируем найденные сообщения
-    if #messages > 0 then
-        Tools.sendMessageAPI("[CHAT_PARSE] Последние " .. #messages .. " сообщений:")
-        for i, msg in ipairs(messages) do
-            -- Обрезаем длинные сообщения для логов
-            local shortMsg = #msg > 50 and (msg:sub(1, 50) .. "...") or msg
-            Tools.sendMessageAPI("[CHAT_PARSE] " .. i .. ": " .. shortMsg)
-        end
-    else
-        Tools.sendMessageAPI("[CHAT_PARSE] Сообщения не найдены!")
+    if not Tools.chatListenerConnected then
+        Tools.sendMessageAPI("[CHAT_LISTENER] ОШИБКА: Не удалось подключиться к чату!")
+    end
+
+    return Tools.chatListenerConnected
+end
+
+-- Получить последние сообщения из буфера
+function Tools.getRecentChatMessages(count)
+    count = count or 10
+
+    -- Подключаем слушатель если ещё не подключен
+    if not Tools.chatListenerConnected then
+        Tools.connectChatListener()
+    end
+
+    local messages = {}
+    for i = 1, math.min(count, #Tools.chatMessageBuffer) do
+        table.insert(messages, Tools.chatMessageBuffer[i].text)
+    end
+
+    Tools.sendMessageAPI("[CHAT_PARSE] Сообщений в буфере: " .. #Tools.chatMessageBuffer .. ", возвращаю: " .. #messages)
+
+    -- Логируем сообщения для диагностики
+    for i, msg in ipairs(messages) do
+        local shortMsg = #msg > 60 and (msg:sub(1, 60) .. "...") or msg
+        Tools.sendMessageAPI("[CHAT_PARSE] " .. i .. ": " .. shortMsg)
     end
 
     return messages

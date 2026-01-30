@@ -49,6 +49,7 @@ if not Tools.isEnabled() then
 end
 
 if Tools.waitForPlayButton(20) then
+    task.wait(5)
     Tools.clickPlayButton()
     Tools.sendMessageAPI("Клик по кнопке PlayButton выполнен успешно")
 else
@@ -61,6 +62,7 @@ if not Tools.isEnabled() then
     return
 end
 
+task.wait(5)
 Tools.sendChat("Всем привет")
 task.wait(5)
 

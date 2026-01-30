@@ -291,6 +291,73 @@ function Tools.sendMessageAPI(message)
     end
 end
 
+-- Получить список посещенных серверов
+function Tools.getVisitedServers(hours)
+    hours = hours or 24
+    if not httprequest then
+        warn("[SERVERS] HTTP функция недоступна!")
+        return {}
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/servers/visited?hours=" .. hours,
+            Method = "GET",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        if data.success then
+            Tools.sendMessageAPI("[SERVERS] Загружено " .. data.count .. " посещенных серверов")
+            return data.servers
+        end
+    else
+        warn("[SERVERS] Ошибка загрузки серверов:", response and response.StatusCode or "unknown")
+    end
+
+    return {}
+end
+
+-- Отметить сервер как посещенный
+function Tools.markServerVisited(serverId, userId, placeId)
+    if not httprequest then
+        warn("[SERVERS] HTTP функция недоступна!")
+        return false
+    end
+
+    local url = Tools.apiUrl .. "/servers/visit?server_id=" .. HttpService:UrlEncode(serverId)
+    if userId then
+        url = url .. "&user_id=" .. HttpService:UrlEncode(userId)
+    end
+    if placeId then
+        url = url .. "&place_id=" .. tostring(placeId)
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        Tools.sendMessageAPI("[SERVERS] Сервер отмечен как посещенный: " .. serverId)
+        return true
+    else
+        warn("[SERVERS] Ошибка записи сервера:", response and response.StatusCode or "unknown")
+        return false
+    end
+end
+
 
 function Tools.serverHop()
     if not httprequest then
@@ -299,6 +366,14 @@ function Tools.serverHop()
     end
 
     Tools.sendMessageAPI("[HOP] Начинаю переключение сервера...")
+
+    -- Загружаем список посещенных серверов за последние 24 часа
+    local visitedServers = Tools.getVisitedServers(24)
+    local visitedSet = {}
+    for _, serverId in ipairs(visitedServers) do
+        visitedSet[serverId] = true
+    end
+
     local cursor = ""
     local maxPages = 30
     local pagesChecked = 0
@@ -346,15 +421,21 @@ function Tools.serverHop()
                 local maxPlayers = server.maxPlayers
                 local serverId = server.id
 
-                -- Проверяем условия: достаточно игроков, есть запас мест, не текущий сервер
+                -- Проверяем условия: достаточно игроков, есть запас мест, не текущий сервер, не был посещен
                 -- Оставляем минимум 5 свободных мест для надежной телепортации
                 local freeSlots = maxPlayers - playerCount
+                local notVisited = not visitedSet[serverId]
+
                 if playerCount >= currentMinPlayers and
                    freeSlots >= 5 and
                    playerCount <= Tools.maxPlayersAllowed and
-                   serverId ~= game.JobId then
+                   serverId ~= game.JobId and
+                   notVisited then
 
                     Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков (свободно: " .. freeSlots .. ")")
+
+                    -- Отмечаем сервер как посещенный
+                    Tools.markServerVisited(serverId, tostring(player.UserId), Tools.placeId)
 
                     -- Телепортация
                     local teleportSuccess = pcall(function()
@@ -368,6 +449,9 @@ function Tools.serverHop()
                     else
                         warn("[HOP] Ошибка телепортации, продолжаю поиск...")
                     end
+                elseif visitedSet[serverId] and playerCount >= currentMinPlayers then
+                    -- Сервер уже был посещен, пропускаем
+                    -- Не логируем каждый пропуск, чтобы не спамить
                 end
             end
 

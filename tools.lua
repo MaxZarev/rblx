@@ -358,6 +358,77 @@ function Tools.markServerVisited(serverId, userId, placeId)
     end
 end
 
+-- Получить сохраненный курсор
+function Tools.getSavedCursor(placeId)
+    if not httprequest then
+        return nil
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/cursor/get?place_id=" .. tostring(placeId),
+            Method = "GET",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local data = HttpService:JSONDecode(response.Body)
+        if data.success and data.cursor then
+            return {cursor = data.cursor, pageNumber = data.page_number}
+        end
+    end
+
+    return nil
+end
+
+-- Сохранить курсор
+function Tools.saveCursor(placeId, cursor, pageNumber)
+    if not httprequest then
+        return false
+    end
+
+    local url = Tools.apiUrl .. "/cursor/save?place_id=" .. tostring(placeId) ..
+                "&cursor=" .. HttpService:UrlEncode(cursor) ..
+                "&page_number=" .. tostring(pageNumber)
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    return success and response.StatusCode == 200
+end
+
+-- Очистить курсор
+function Tools.clearCursor(placeId)
+    if not httprequest then
+        return false
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/cursor/clear?place_id=" .. tostring(placeId),
+            Method = "DELETE",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    return success and response.StatusCode == 200
+end
+
 
 function Tools.serverHop()
     if not httprequest then
@@ -374,9 +445,20 @@ function Tools.serverHop()
         visitedSet[serverId] = true
     end
 
+    -- Пытаемся загрузить сохраненный курсор
+    local savedCursor = Tools.getSavedCursor(Tools.placeId)
     local cursor = ""
-    local maxPages = 30
     local pagesChecked = 0
+
+    if savedCursor then
+        cursor = savedCursor.cursor
+        pagesChecked = savedCursor.pageNumber
+        Tools.sendMessageAPI("[HOP] Продолжаю с сохраненной страницы " .. (pagesChecked + 1))
+    else
+        Tools.sendMessageAPI("[HOP] Начинаю с первой страницы")
+    end
+
+    local maxPages = 30
     local searchStartTime = tick()
     local currentMinPlayers = Tools.minPlayersPreferred
     local consecutiveRateLimits = 0
@@ -398,9 +480,8 @@ function Tools.serverHop()
 
         pagesChecked = pagesChecked + 1
         task.wait(5)
-
         local url = string.format(
-            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100%s",
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true%s",
             Tools.placeId,
             cursor ~= "" and "&cursor=" .. cursor or ""
         )
@@ -437,6 +518,12 @@ function Tools.serverHop()
                     -- Отмечаем сервер как посещенный
                     Tools.markServerVisited(serverId, tostring(player.UserId), Tools.placeId)
 
+                    -- Сохраняем текущий курсор перед телепортацией
+                    if cursor ~= "" then
+                        Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
+                        Tools.sendMessageAPI("[HOP] Курсор сохранен для следующего запуска")
+                    end
+
                     -- Телепортация
                     local teleportSuccess = pcall(function()
                         queueFunc('loadstring(game:HttpGet("' .. Tools.scriptUrl .. '"))()')
@@ -458,9 +545,14 @@ function Tools.serverHop()
             -- Обновляем курсор для следующей страницы
             if data.nextPageCursor then
                 cursor = data.nextPageCursor
+                -- Сохраняем курсор для следующей попытки
+                Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
             else
-                Tools.sendMessageAPI("[HOP] Больше нет страниц, серверы не найдены")
-                return false
+                -- Достигли конца, начинаем заново
+                Tools.sendMessageAPI("[HOP] Достигнут конец списка, начинаю с начала")
+                Tools.clearCursor(Tools.placeId)
+                cursor = ""
+                pagesChecked = 0
             end
         elseif success and response.StatusCode == 429 then
             -- Обработка rate limit с exponential backoff

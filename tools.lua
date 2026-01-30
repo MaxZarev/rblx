@@ -430,8 +430,38 @@ function Tools.clearCursor(placeId)
 end
 
 -- ============================================
--- ФУНКЦИИ ДЛЯ РАБОТЫ С РЕКЛАМНЫМИ СООБЩЕНИЯМИ
+-- ФУНКЦИИ ДЛЯ РАБОТЫ С СООБЩЕНИЯМИ
 -- ============================================
+
+-- Получить обычное сообщение (камуфляж)
+function Tools.getCasualMessage()
+    if not httprequest then
+        return "hi"
+    end
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = Tools.apiUrl .. "/messages/casual",
+            Method = "GET",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(response.Body)
+        end)
+
+        if ok and data.success then
+            return data.message
+        end
+    end
+
+    return "hi"
+end
 
 -- Получить рекламное сообщение из базы
 function Tools.getAdMessage()

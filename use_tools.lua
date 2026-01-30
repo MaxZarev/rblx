@@ -5,7 +5,7 @@ local MIN_PLAYERS_FALLBACK = 3  -- Запасное минимальное ко�
 local MAX_PLAYERS_ALLOWED = 100  -- Максимальное количество игроков (принимаем почти любой сервер)
 local SEARCH_TIMEOUT = 60  -- Таймаут поиска в секундах, после которого снижаются требования
 local TELEPORT_COOLDOWN = 15  -- Задержка перед телепортацией (сокращенная)
-local SCRIPT_URL = "https://raw.githubusercontent.com/MaxZarev/rblx/refs/heads/main/use_tools.lua" 
+local SCRIPT_URL = "https://raw.githubusercontent.com/MaxZarev/rblx/refs/heads/main/use_tools.lua"
 
 local API_URL = "https://aerogenic-averi-subnutritiously.ngrok-free.dev"
 
@@ -14,6 +14,13 @@ local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev
 
 
 local API_KEY = Auth.getApiKey()
+
+-- Рандомная пауза в диапазоне [min, max] секунд
+local function randomWait(min, max)
+    local delay = min + math.random() * (max - min)
+    task.wait(delay)
+    return delay
+end
 
 -- Защита от дублирования скрипта
 if _G.BotRunning then
@@ -32,7 +39,7 @@ while not Tools.isEnabled() do
     task.wait(1)
 end
 
-task.wait(5)
+randomWait(3, 7)
 
 -- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
@@ -41,11 +48,11 @@ if not Tools.isEnabled() then
 end
 
 if Tools.waitForPlayButton(20) then
-    task.wait(5)
+    randomWait(3, 6)
     Tools.clickPlayButton()
-    Tools.sendMessageAPI("Клик по кнопке PlayButton выполнен успешно")
+    Tools.sendMessageAPI("PlayButton OK")
 else
-    Tools.sendMessageAPI("Кнопка PlayButton не найдена")
+    Tools.sendMessageAPI("PlayButton не найден")
 end
 
 -- Проверяем перед выполнением действия
@@ -54,20 +61,36 @@ if not Tools.isEnabled() then
     return
 end
 
-task.wait(5)
+-- Пауза после входа в игру
+randomWait(5, 10)
 
--- Получаем сообщение из базы данных (сразу отмечается использованным)
-local messageData = Tools.getAdMessage()
+-- 1. Отправляем обычное сообщение (камуфляж)
+local casualMsg = Tools.getCasualMessage()
+Tools.sendChat(casualMsg)
+Tools.sendMessageAPI("[CASUAL] " .. casualMsg)
 
-if messageData then
-    Tools.sendChat(messageData.message)
-    Tools.sendMessageAPI("[AD] ID: " .. messageData.id)
+-- Пауза между сообщениями
+randomWait(8, 15)
+
+-- Проверяем перед выполнением действия
+if not Tools.isEnabled() then
+    Tools.sendMessageAPI("[BOT] Остановлен пользователем")
+    return
+end
+
+-- 2. Отправляем рекламное сообщение
+local adData = Tools.getAdMessage()
+
+if adData then
+    Tools.sendChat(adData.message)
+    Tools.sendMessageAPI("[AD] ID: " .. adData.id)
 else
     Tools.sendChat("RBLX . PW - best Adopt Me marketplace")
     Tools.sendMessageAPI("[AD] Fallback")
 end
 
-task.wait(5)
+-- Пауза перед сменой сервера
+randomWait(5, 10)
 
 -- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
@@ -76,5 +99,3 @@ if not Tools.isEnabled() then
 end
 
 Tools.serverHop()
-
-task.wait(5)

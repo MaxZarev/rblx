@@ -325,7 +325,7 @@ function Tools.serverHop()
         task.wait(5)
 
         local url = string.format(
-            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s",
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100%s",
             Tools.placeId,
             cursor ~= "" and "&cursor=" .. cursor or ""
         )

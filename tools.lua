@@ -448,7 +448,7 @@ function Tools.serverHop()
     -- Пытаемся загрузить сохраненный курсор
     local savedCursor = Tools.getSavedCursor(Tools.placeId)
     local cursor = ""
-    local pagesChecked = 0
+    local pagesChecked = 1
     local lastSavedCursor = ""  -- Отслеживаем последний сохраненный курсор
 
     if savedCursor then
@@ -460,13 +460,12 @@ function Tools.serverHop()
         Tools.sendMessageAPI("[HOP] Начинаю с первой страницы")
     end
 
-    local maxPages = 30
     local searchStartTime = tick()
     local currentMinPlayers = Tools.minPlayersPreferred
     local consecutiveRateLimits = 0
     Tools.sendMessageAPI("[HOP] Ищу серверы с " .. currentMinPlayers .. "+ игроков. Максимальное количество игроков: " .. Tools.maxPlayersAllowed)
 
-    while pagesChecked < maxPages do
+    while true do
         -- Проверяем, включен ли бот
         if not Tools.isEnabled() then
             Tools.sendMessageAPI("[HOP] Остановлено пользователем")
@@ -480,8 +479,8 @@ function Tools.serverHop()
             Tools.sendMessageAPI("[HOP] Снижаю требования до " .. currentMinPlayers .. "+ игроков...")
         end
 
-        pagesChecked = pagesChecked + 1
         task.wait(5)
+
         local url = string.format(
             "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true%s",
             Tools.placeId,
@@ -550,6 +549,7 @@ function Tools.serverHop()
                 cursor = data.nextPageCursor
                 -- Сохраняем курсор для следующей попытки только если он изменился
                 if cursor ~= lastSavedCursor then
+                    pagesChecked = pagesChecked + 1
                     Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
                     lastSavedCursor = cursor
                 end
@@ -583,9 +583,6 @@ function Tools.serverHop()
             task.wait(5)
         end
     end
-
-    Tools.sendMessageAPI("[HOP] Не удалось найти подходящий сервер за " .. maxPages .. " страниц")
-    return false
 end
 
 

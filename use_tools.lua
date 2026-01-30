@@ -33,15 +33,7 @@ local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev
 local API_KEY = Auth.getApiKey()
 Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MIN_PLAYERS_FALLBACK, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
 
-
--- Защита от дублирования скрипта
-if _G.BotRunning then
-    Tools.sendMessageAPI("Скрипт уже запущен!")
-    return
-end
-_G.BotRunning = true
-
-
+Tools.sendMessageAPI("Скрипт запущен")
 
 -- Ждем пока бот будет включен
 while not Tools.isEnabled() do

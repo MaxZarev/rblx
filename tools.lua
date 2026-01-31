@@ -8,6 +8,7 @@ local TeleportService = game:GetService("TeleportService")
 
 
 local queueFunc = queueonteleport
+local scriptQueued = false
 local httprequest = http_request or http.request or request or (syn and syn.request)
 
 local player = Players.LocalPlayer
@@ -837,18 +838,16 @@ function Tools.serverHop()
 
     Tools.sendMessageAPI("[HOP] Начинаю переключение сервера...")
 
-    -- Загружаем список посещенных серверов за последние 24 часа
     local visitedServers = Tools.getVisitedServers(24)
     local visitedSet = {}
     for _, serverId in ipairs(visitedServers) do
         visitedSet[serverId] = true
     end
 
-    -- Пытаемся загрузить сохраненный курсор
     local savedCursor = Tools.getSavedCursor(Tools.placeId)
     local cursor = ""
     local pagesChecked = 1
-    local lastSavedCursor = ""  -- Отслеживаем последний сохраненный курсор
+    local lastSavedCursor = ""  
 
     if savedCursor then
         cursor = savedCursor.cursor
@@ -928,9 +927,12 @@ function Tools.serverHop()
                         lastSavedCursor = cursor
                     end
 
-                    -- Телепортация
+                    
                     local teleportSuccess = pcall(function()
-                        queueFunc('loadstring(game:HttpGet("' .. Tools.scriptUrl .. '"))()')
+                        if not scriptQueued then
+                            queueFunc('loadstring(game:HttpGet("' .. Tools.scriptUrl .. '"))()')
+                            scriptQueued = true
+                        end
                         TeleportService:TeleportToPlaceInstance(Tools.placeId, serverId, player)
                     end)
 

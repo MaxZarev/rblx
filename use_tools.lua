@@ -7,6 +7,8 @@ local SEARCH_TIMEOUT = 60  -- Таймаут поиска в секундах, �
 local TELEPORT_COOLDOWN = 15  -- Задержка перед телепортацией (сокращенная)
 local SCRIPT_URL = "https://raw.githubusercontent.com/MaxZarev/rblx/refs/heads/main/use_tools.lua"
 
+local WATCHDOG_TIMEOUT = 180
+
 local API_URL = "https://aerogenic-averi-subnutritiously.ngrok-free.dev"
 
 local Tools = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/tools.lua?t=" .. tick()))()
@@ -15,39 +17,43 @@ local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev
 
 local API_KEY = Auth.getApiKey()
 
--- Рандомная пауза в диапазоне [min, max] секунд
-local function randomWait(min, max)
-    local delay = min + math.random() * (max - min)
-    task.wait(delay)
-    return delay
-end
-
--- Защита от дублирования скрипта
 if _G.BotRunning then
     Tools.sendMessageAPI("Скрипт уже запущен!")
     return
 end
 _G.BotRunning = true
 
-
 Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MIN_PLAYERS_FALLBACK, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
 
-Tools.sendMessageAPI("Скрипт запущен")
+task.spawn(function()
+    task.wait(WATCHDOG_TIMEOUT)
+    
+    pcall(function() Tools.sendMessageAPI("[WATCHDOG-1] Таймаут " .. WATCHDOG_TIMEOUT .. "с") end)
+    
+    for i = 1, 3 do
+        pcall(function() Tools.serverHop() end)
+        task.wait(30)
+    end
+    
+    pcall(function()
+        game:GetService("TeleportService"):Teleport(PLACE_ID, game:GetService("Players").LocalPlayer)
+    end)
+end)
 
--- Подключаем слушатель чата сразу при старте (чтобы собирать сообщения)
+
+Tools.sendMessageAPI("Скрипт запущен v1.0.0")
 Tools.connectChatListener()
 
 
-randomWait(3, 7)
+Tools.randomDelay(3, 7)
 
--- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
     Tools.sendMessageAPI("[BOT] Остановлен пользователем")
     return
 end
 
 if Tools.waitForPlayButton(20) then
-    randomWait(3, 6)
+    Tools.randomDelay(3, 6)
     Tools.clickPlayButton()
     Tools.sendMessageAPI("PlayButton OK")
 else
@@ -56,6 +62,7 @@ end
 
 
 if Tools.waitForAdoptionIslandButton(20) then
+    Tools.randomDelay(3, 6)
     local success, message = Tools.clickAdoptionIslandButton()
     if success then
         Tools.sendMessageAPI("Клик по кнопке Adoption Island выполнен успешно")
@@ -65,47 +72,38 @@ if Tools.waitForAdoptionIslandButton(20) then
 end
 
 
--- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
     Tools.sendMessageAPI("[BOT] Остановлен пользователем")
     return
 end
 
--- Пауза после входа в игру
-randomWait(5, 10)
+Tools.randomDelay(5, 10)
 
--- 1. Отправляем обычное сообщение (камуфляж)
 local casualMsg = Tools.getCasualMessage()
 Tools.sendChat(casualMsg)
 Tools.sendMessageAPI("[CASUAL] " .. casualMsg)
 
--- Пауза между сообщениями
-randomWait(8, 15)
+Tools.randomDelay(8, 15)
 
--- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
     Tools.sendMessageAPI("[BOT] Остановлен пользователем")
     return
 end
 
--- 2. Отправляем рекламное сообщение
 local adData = Tools.getAdMessage()
 
 if adData then
     Tools.sendChat(adData.message)
-    Tools.sendMessageAPI("[AD] ID: " .. adData.id)
+    Tools.sendMessageAPI("[AD] ID: " .. adData.id .. " Message: " .. adData.message)
 
-    -- Проверяем фильтрацию через 2 секунды
     Tools.checkAndDeactivateIfFiltered(adData.id, 2)
 else
-    Tools.sendChat("RBLX . PW - best Adopt Me marketplace")
+    Tools.sendChat("RBLX . PW - sell you pets for real money")
     Tools.sendMessageAPI("[AD] Fallback")
 end
 
--- Пауза перед сменой сервера
-randomWait(5, 10)
+Tools.randomDelay(5, 10)
 
--- Проверяем перед выполнением действия
 if not Tools.isEnabled() then
     Tools.sendMessageAPI("[BOT] Остановлен пользователем")
     return

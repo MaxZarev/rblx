@@ -23,11 +23,10 @@ local Tools = {
     teleportCooldown = 15,
     placeId = 920587237,
     scriptUrl = "",
-    enabled = true,  -- Состояние скрипта (включен/выключен)
-    gui = nil,       -- Ссылка на GUI элемент
+    enabled = true,  
+    gui = nil,       
 }
 
--- Перемешивание массива (алгоритм Фишера-Йетса)
 local function shuffleArray(arr)
     local n = #arr
     for i = n, 2, -1 do
@@ -200,6 +199,29 @@ function Tools.isPlayButtonVisible()
     return playButton ~= nil
 end
 
+
+function Tools.randomDelay(min, max)
+    task.wait(min + math.random() * (max - min))
+end
+
+function Tools.getTypeDelay(char, prevChar)
+    local baseDelay = 0.15 + math.random() * 0.15
+
+    if prevChar == " " then
+        baseDelay = baseDelay + math.random() * 0.1
+    end
+
+    if char:match("[A-ZА-Я]") then
+        baseDelay = baseDelay + 0.02
+    end
+
+    if char:match("[%d%p]") then
+        baseDelay = baseDelay + 0.03
+    end
+
+    return baseDelay
+end
+
 -- Клик по кнопке PlayButton
 function Tools.clickPlayButton()
     local newsApp = playerGui and playerGui:FindFirstChild("NewsApp")
@@ -310,50 +332,33 @@ function Tools.clickAdoptionIslandButton()
 end
 
 
--- Отправка сообщения в чат Roblox (локально)
 function Tools.sendChat(msg)
-    task.spawn(function()  -- Запускаем в асинхронном потоке
-        local sent = false
+    Tools.randomDelay(0.2, 0.5)
 
-        -- TextChatService (новая система чата Roblox)
-        local TextChatService = game:GetService("TextChatService")
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            local ch = TextChatService.TextChannels.RBXGeneral
-            if ch then
-                local success = pcall(function()
-                    ch:SendAsync(msg)
-                end)
-                if success then
-                    sent = true
-                end
-            end
-        end
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Slash, false, game)
+    Tools.randomDelay(0.03, 0.08)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Slash, false, game)
 
-        -- Legacy chat fallback (старая система чата для обратной совместимости)
-        if not sent then
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local say = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-            if say then
-                say = say:FindFirstChild("SayMessageRequest")
-                if say then
-                    local success = pcall(function()
-                        say:FireServer(msg, "All")
-                    end)
-                    if success then
-                        sent = true
-                    end
-                end
-            end
-        end
+    Tools.randomDelay(0.2, 0.4)
 
-        -- Отправляем уведомление только один раз
-        if sent then
-            Tools.sendMessageAPI("[CHAT] Sent: " .. msg)
-        end
-    end)
+    local prevChar = ""
+    for i = 1, #msg do
+        local char = msg:sub(i, i)
+        VirtualInputManager:SendTextInputCharacterEvent(char, game)
+        task.wait(Tools.getTypeDelay(char, prevChar))
+        prevChar = char
+    end
+
+    Tools.randomDelay(0.1, 0.3)
+
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+    Tools.randomDelay(0.03, 0.07)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+    Tools.sendMessageAPI("[CHAT] Sent: " .. msg)
+
 end
 
--- Отправка сообщения через API сервер
+
 function Tools.sendMessageAPI(message)
     if not httprequest then
         warn("HTTP request function not available")

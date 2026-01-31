@@ -831,7 +831,7 @@ end
 function Tools.serverHop()
     Tools.sendMessageAPI("[HOP] Начинаю переключение сервера...")
 
-    local visitedServers = Tools.getVisitedServers(24)
+    local visitedServers = Tools.getVisitedServers(12)
     local visitedSet = {}
     for _, serverId in ipairs(visitedServers) do
         visitedSet[serverId] = true

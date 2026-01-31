@@ -1,7 +1,6 @@
 
 local PLACE_ID = 920587237  -- ID игры Adopt Me на платформе Roblox
 local MIN_PLAYERS_PREFERRED = 5  -- Предпочтительное минимальное количество игроков на сервере
-local MIN_PLAYERS_FALLBACK = 3  -- Запасное минимальное количество, если поиск затягивается
 local MAX_PLAYERS_ALLOWED = 100  -- Максимальное количество игроков (принимаем почти любой сервер)
 local SEARCH_TIMEOUT = 60  -- Таймаут поиска в секундах, после которого снижаются требования
 local TELEPORT_COOLDOWN = 15  -- Задержка перед телепортацией (сокращенная)
@@ -23,7 +22,7 @@ if _G.BotRunning then
 end
 _G.BotRunning = true
 
-Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MIN_PLAYERS_FALLBACK, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
+Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
 
 task.spawn(function()
     task.wait(WATCHDOG_TIMEOUT)
@@ -81,7 +80,6 @@ Tools.randomDelay(5, 10)
 
 local casualMsg = Tools.getCasualMessage()
 Tools.sendChat(casualMsg)
-Tools.sendMessageAPI("[CASUAL] " .. casualMsg)
 
 Tools.randomDelay(8, 15)
 
@@ -94,7 +92,6 @@ local adData = Tools.getAdMessage()
 
 if adData then
     Tools.sendChat(adData.message)
-    Tools.sendMessageAPI("[AD] ID: " .. adData.id .. " Message: " .. adData.message)
 
     Tools.checkAndDeactivateIfFiltered(adData.id, 2)
 else

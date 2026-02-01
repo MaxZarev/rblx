@@ -55,7 +55,6 @@ local function runBot()
     if Tools.waitForPlayButton(20) then
         Tools.randomDelay(3, 6)
         Tools.clickPlayButton()
-        Tools.sendMessageAPI("PlayButton OK")
     else
         Tools.sendMessageAPI("PlayButton не найден")
     end
@@ -63,9 +62,7 @@ local function runBot()
     if Tools.waitForAdoptionIslandButton(20) then
         Tools.randomDelay(3, 6)
         local success, message = Tools.clickAdoptionIslandButton()
-        if success then
-            Tools.sendMessageAPI("Клик по кнопке Adoption Island выполнен успешно")
-        else
+        if not success then
             Tools.sendMessageAPI("Клик по кнопке Adoption Island не выполнен")
         end
     end

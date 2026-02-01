@@ -626,7 +626,7 @@ function Tools.getVisitedServers(hours)
 end
 
 -- Отметить сервер как посещенный
-function Tools.markServerVisited(serverId, userId, placeId)
+function Tools.markServerVisited(serverId, placeId)
     if not httprequest then
         warn("[SERVERS] HTTP функция недоступна!")
         return false
@@ -634,9 +634,6 @@ function Tools.markServerVisited(serverId, userId, placeId)
 
     local botId = player and player.Name or "unknown"
     local url = Tools.apiUrl .. "/servers/visit?server_id=" .. HttpService:UrlEncode(serverId) .. "&bot_id=" .. HttpService:UrlEncode(botId)
-    if userId then
-        url = url .. "&user_id=" .. HttpService:UrlEncode(userId)
-    end
     if placeId then
         url = url .. "&place_id=" .. tostring(placeId)
     end
@@ -1058,7 +1055,6 @@ function Tools.serverHop()
         cursor = savedCursor.cursor
         pagesChecked = savedCursor.pageNumber
         lastSavedCursor = cursor
-        Tools.sendMessageAPI("[HOP] Загружен сохранённый курсор: страница " .. pagesChecked .. ", cursor=" .. (cursor ~= "" and "есть" or "пустой"))
         if pagesChecked >= 20 then
             Tools.sendMessageAPI("[HOP] Сохранённая страница " .. pagesChecked .. " >= 20, начинаю с начала")
             Tools.clearCursor(Tools.placeId)
@@ -1115,7 +1111,7 @@ function Tools.serverHop()
 
                     Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков (свободно: " .. freeSlots .. ")")
 
-                    Tools.markServerVisited(serverId, tostring(player.UserId), Tools.placeId)
+                    Tools.markServerVisited(serverId, Tools.placeId)
 
                     local teleportSuccess = pcall(function()
                         if not scriptQueued then

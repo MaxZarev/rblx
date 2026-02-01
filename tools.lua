@@ -632,7 +632,8 @@ function Tools.markServerVisited(serverId, userId, placeId)
         return false
     end
 
-    local url = Tools.apiUrl .. "/servers/visit?server_id=" .. HttpService:UrlEncode(serverId)
+    local botId = player and player.Name or "unknown"
+    local url = Tools.apiUrl .. "/servers/visit?server_id=" .. HttpService:UrlEncode(serverId) .. "&bot_id=" .. HttpService:UrlEncode(botId)
     if userId then
         url = url .. "&user_id=" .. HttpService:UrlEncode(userId)
     end

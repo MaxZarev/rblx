@@ -69,45 +69,31 @@ local function requestPassword()
     return password
 end
 
--- Создание постоянного меню в левом нижнем углу
-local function createSettingsMenu()
-    local ScreenGui = Instance.new("ScreenGui")
-    local Frame = Instance.new("Frame")
+-- Добавление секции API ключа в общее меню
+function Auth.addApiKeySection(parentFrame, yOffset)
+    local Separator = Instance.new("Frame")
+    Separator.Parent = parentFrame
+    Separator.Size = UDim2.new(1, -20, 0, 1)
+    Separator.Position = UDim2.new(0, 10, 0, yOffset)
+    Separator.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Separator.BorderSizePixel = 0
+
     local Title = Instance.new("TextLabel")
-    local PasswordBox = Instance.new("TextBox")
-    local SaveButton = Instance.new("TextButton")
-    local StatusLabel = Instance.new("TextLabel")
-
-    ScreenGui.Name = "AuthSettingsMenu"
-    ScreenGui.Parent = game.CoreGui
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.ResetOnSpawn = false
-
-    Frame.Parent = ScreenGui
-    Frame.Size = UDim2.new(0, 280, 0, 160)
-    Frame.Position = UDim2.new(0, 10, 1, -170)
-    Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    Frame.BorderSizePixel = 1
-    Frame.BorderColor3 = Color3.fromRGB(60, 60, 60)
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = Frame
-
-    Title.Parent = Frame
-    Title.Size = UDim2.new(1, -20, 0, 30)
-    Title.Position = UDim2.new(0, 10, 0, 5)
+    Title.Parent = parentFrame
+    Title.Size = UDim2.new(1, -20, 0, 25)
+    Title.Position = UDim2.new(0, 10, 0, yOffset + 10)
     Title.BackgroundTransparency = 1
     Title.Text = "🔑 API Ключ"
     Title.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Title.TextSize = 16
+    Title.TextSize = 14
     Title.Font = Enum.Font.SourceSansBold
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
+    local PasswordBox = Instance.new("TextBox")
     PasswordBox.Name = "PasswordBox"
-    PasswordBox.Parent = Frame
-    PasswordBox.Size = UDim2.new(1, -20, 0, 35)
-    PasswordBox.Position = UDim2.new(0, 10, 0, 40)
+    PasswordBox.Parent = parentFrame
+    PasswordBox.Size = UDim2.new(1, -20, 0, 32)
+    PasswordBox.Position = UDim2.new(0, 10, 0, yOffset + 40)
     PasswordBox.PlaceholderText = "Введите API ключ"
     PasswordBox.Text = ""
     PasswordBox.TextColor3 = Color3.new(1, 1, 1)
@@ -115,7 +101,7 @@ local function createSettingsMenu()
     PasswordBox.BorderSizePixel = 1
     PasswordBox.BorderColor3 = Color3.fromRGB(70, 70, 70)
     PasswordBox.Font = Enum.Font.SourceSans
-    PasswordBox.TextSize = 16
+    PasswordBox.TextSize = 14
     PasswordBox.ClearTextOnFocus = false
     PasswordBox.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -127,28 +113,30 @@ local function createSettingsMenu()
     UIPadding.PaddingLeft = UDim.new(0, 8)
     UIPadding.Parent = PasswordBox
 
-    SaveButton.Parent = Frame
-    SaveButton.Size = UDim2.new(1, -20, 0, 35)
-    SaveButton.Position = UDim2.new(0, 10, 0, 85)
+    local SaveButton = Instance.new("TextButton")
+    SaveButton.Parent = parentFrame
+    SaveButton.Size = UDim2.new(1, -20, 0, 32)
+    SaveButton.Position = UDim2.new(0, 10, 0, yOffset + 80)
     SaveButton.Text = "💾 Сохранить"
     SaveButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
     SaveButton.BorderSizePixel = 0
     SaveButton.TextColor3 = Color3.new(1, 1, 1)
     SaveButton.Font = Enum.Font.SourceSansBold
-    SaveButton.TextSize = 16
+    SaveButton.TextSize = 14
 
     local ButtonUICorner = Instance.new("UICorner")
     ButtonUICorner.CornerRadius = UDim.new(0, 4)
     ButtonUICorner.Parent = SaveButton
 
+    local StatusLabel = Instance.new("TextLabel")
     StatusLabel.Name = "StatusLabel"
-    StatusLabel.Parent = Frame
-    StatusLabel.Size = UDim2.new(1, -20, 0, 20)
-    StatusLabel.Position = UDim2.new(0, 10, 0, 130)
+    StatusLabel.Parent = parentFrame
+    StatusLabel.Size = UDim2.new(1, -20, 0, 18)
+    StatusLabel.Position = UDim2.new(0, 10, 0, yOffset + 120)
     StatusLabel.BackgroundTransparency = 1
     StatusLabel.Text = ""
     StatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-    StatusLabel.TextSize = 13
+    StatusLabel.TextSize = 12
     StatusLabel.Font = Enum.Font.SourceSans
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 
@@ -199,7 +187,7 @@ local function createSettingsMenu()
         end
     end)
 
-    return ScreenGui
+    return yOffset + 145
 end
 
 -- Получение API ключа (с кэшированием)
@@ -268,18 +256,6 @@ function Auth.resetPassword()
         print("⚠ Функция удаления файлов недоступна")
         return false
     end
-end
-
--- Инициализация меню настроек
-function Auth.initSettingsMenu()
-    pcall(function()
-        local existingGui = game.CoreGui:FindFirstChild("AuthSettingsMenu")
-        if existingGui then
-            existingGui:Destroy()
-        end
-    end)
-    
-    return createSettingsMenu()
 end
 
 return Auth

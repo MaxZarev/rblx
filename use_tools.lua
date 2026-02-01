@@ -16,15 +16,13 @@ local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev
 
 local API_KEY = Auth.getApiKey()
 
-Auth.initSettingsMenu()
-
 if _G.BotRunning then
     Tools.sendMessageAPI("Скрипт уже запущен!")
     return
 end
 _G.BotRunning = true
 
-Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL)
+Tools.setup(API_URL, API_KEY, MIN_PLAYERS_PREFERRED, MAX_PLAYERS_ALLOWED, SEARCH_TIMEOUT, TELEPORT_COOLDOWN, PLACE_ID, SCRIPT_URL, Auth)
 
 task.spawn(function()
     task.wait(WATCHDOG_TIMEOUT)

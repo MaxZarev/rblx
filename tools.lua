@@ -36,7 +36,7 @@ local function shuffleArray(arr)
     return arr
 end
 
--- Создание GUI с переключателем On/Off
+-- Создание GUI с переключателем On/Off и настройками API
 function Tools.createToggleGUI()
     -- Удаляем старый GUI если существует
     local oldGui = playerGui:FindFirstChild("BotToggleGUI")
@@ -50,11 +50,11 @@ function Tools.createToggleGUI()
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    -- Создаем Frame (фон)
+    -- Создаем Frame (фон) - увеличиваем высоту для секции API
     local frame = Instance.new("Frame")
     frame.Name = "ToggleFrame"
-    frame.Size = UDim2.new(0, 150, 0, 60)
-    frame.Position = UDim2.new(0, 10, 1, -70)  -- Слева снизу
+    frame.Size = UDim2.new(0, 280, 0, 225)
+    frame.Position = UDim2.new(0, 10, 1, -235)
     frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     frame.BorderSizePixel = 2
     frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -68,25 +68,26 @@ function Tools.createToggleGUI()
     -- Текст "Bot Status"
     local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 5)
+    label.Size = UDim2.new(1, -20, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, 5)
     label.BackgroundTransparency = 1
-    label.Text = "Bot Status"
+    label.Text = "🤖 Bot Status"
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.TextSize = 14
-    label.Font = Enum.Font.GothamBold
+    label.Font = Enum.Font.SourceSansBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
     -- Кнопка переключения
     local toggleButton = Instance.new("TextButton")
     toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0, 130, 0, 25)
-    toggleButton.Position = UDim2.new(0, 10, 0, 28)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  -- Зеленый (ON)
+    toggleButton.Size = UDim2.new(1, -20, 0, 32)
+    toggleButton.Position = UDim2.new(0, 10, 0, 30)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
     toggleButton.Text = "ON"
     toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextSize = 16
-    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.TextSize = 14
+    toggleButton.Font = Enum.Font.SourceSansBold
     toggleButton.Parent = frame
 
     local buttonCorner = Instance.new("UICorner")
@@ -98,11 +99,11 @@ function Tools.createToggleGUI()
         Tools.enabled = not Tools.enabled
 
         if Tools.enabled then
-            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  -- Зеленый
+            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
             toggleButton.Text = "ON"
             Tools.sendMessageAPI("[GUI] Bot включен")
         else
-            toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)  -- Красный
+            toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
             toggleButton.Text = "OFF"
             Tools.sendMessageAPI("[GUI] Bot выключен")
         end
@@ -142,7 +143,7 @@ function Tools.createToggleGUI()
     screenGui.Parent = playerGui
     Tools.gui = screenGui
 
-    return screenGui
+    return screenGui, frame
 end
 
 -- Проверка, включен ли бот
@@ -151,7 +152,7 @@ function Tools.isEnabled()
 end
 
 -- Инициализация модуля с API параметрами
-function Tools.setup(apiUrl, apiKey, minPlayersPreferred, maxPlayersAllowed, searchTimeout, teleportCooldown, placeId, scriptUrl)
+function Tools.setup(apiUrl, apiKey, minPlayersPreferred, maxPlayersAllowed, searchTimeout, teleportCooldown, placeId, scriptUrl, Auth)
     if apiUrl then Tools.apiUrl = apiUrl end
     if apiKey then Tools.apiKey = apiKey end
     if minPlayersPreferred then Tools.minPlayersPreferred = minPlayersPreferred end
@@ -161,8 +162,12 @@ function Tools.setup(apiUrl, apiKey, minPlayersPreferred, maxPlayersAllowed, sea
     if placeId then Tools.placeId = placeId end
     if scriptUrl then Tools.scriptUrl = scriptUrl end
 
-    -- Создаем GUI
-    Tools.createToggleGUI()
+    -- Создаем GUI и добавляем секцию API
+    local screenGui, frame = Tools.createToggleGUI()
+    
+    if Auth and Auth.addApiKeySection then
+        Auth.addApiKeySection(frame, 70)
+    end
 
     return Tools
 end

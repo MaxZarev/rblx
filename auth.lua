@@ -105,6 +105,23 @@ function Auth.addApiKeySection(parentFrame, yOffset)
     PasswordBox.ClearTextOnFocus = false
     PasswordBox.TextXAlignment = Enum.TextXAlignment.Left
 
+    -- Загружаем сохранённый API ключ из файла
+    if checkfile and read and type(checkfile) == "function" and type(read) == "function" then
+        local success, fileExists = pcall(function()
+            return checkfile("password.txt")
+        end)
+
+        if success and fileExists then
+            local readSuccess, savedKey = pcall(function()
+                return read("password.txt")
+            end)
+
+            if readSuccess and savedKey and savedKey ~= "" then
+                PasswordBox.Text = savedKey
+            end
+        end
+    end
+
     local PasswordUICorner = Instance.new("UICorner")
     PasswordUICorner.CornerRadius = UDim.new(0, 4)
     PasswordUICorner.Parent = PasswordBox
@@ -140,18 +157,11 @@ function Auth.addApiKeySection(parentFrame, yOffset)
     StatusLabel.Font = Enum.Font.SourceSans
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 
-    -- Маскировка текста точками
+    -- Сохранение введённого API ключа
     local actualPassword = ""
+    
     PasswordBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local currentText = PasswordBox.Text
-        
-        if #currentText > #actualPassword then
-            actualPassword = actualPassword .. currentText:sub(#actualPassword + 1)
-        elseif #currentText < #actualPassword then
-            actualPassword = currentText
-        end
-        
-        PasswordBox.Text = string.rep("•", #actualPassword)
+        actualPassword = PasswordBox.Text
     end)
 
     -- Обработчик кнопки сохранения

@@ -656,75 +656,78 @@ function Tools.markServerVisited(serverId, userId, placeId)
     end
 end
 
--- Получить сохраненный курсор
+-- Получить сохраненный курсор из локального хранилища
 function Tools.getSavedCursor(placeId)
-    if not httprequest then
+    local checkfile = isfile or isfile_custom or (syn and syn.is_file)
+    local read = readfile or read_file or (syn and syn.read_file)
+
+    if not checkfile or not read then
         return nil
     end
 
-    local success, response = pcall(function()
-        return httprequest({
-            Url = Tools.apiUrl .. "/cursor/get?place_id=" .. tostring(placeId),
-            Method = "GET",
-            Headers = {
-                ["Authorization"] = "Bearer " .. Tools.apiKey,
-                ["Content-Type"] = "application/json"
-            }
-        })
+    local filename = "cursor_" .. tostring(placeId) .. ".json"
+
+    local success, fileExists = pcall(function()
+        return checkfile(filename)
     end)
 
-    if success and response.StatusCode == 200 then
-        local data = HttpService:JSONDecode(response.Body)
-        if data.success and data.cursor then
-            return {cursor = data.cursor, pageNumber = data.page_number}
+    if success and fileExists then
+        local readSuccess, cursorData = pcall(function()
+            return read(filename)
+        end)
+
+        if readSuccess and cursorData and cursorData ~= "" then
+            local decodeSuccess, data = pcall(function()
+                return HttpService:JSONDecode(cursorData)
+            end)
+
+            if decodeSuccess and data then
+                return {cursor = data.cursor, pageNumber = data.pageNumber}
+            end
         end
     end
 
     return nil
 end
 
--- Сохранить курсор
+-- Сохранить курсор в локальное хранилище
 function Tools.saveCursor(placeId, cursor, pageNumber)
-    if not httprequest then
+    local write = writefile or write_file or (syn and syn.write_file)
+    
+    if not write then
         return false
     end
 
-    local url = Tools.apiUrl .. "/cursor/save?place_id=" .. tostring(placeId) ..
-                "&cursor=" .. HttpService:UrlEncode(cursor) ..
-                "&page_number=" .. tostring(pageNumber)
+    local filename = "cursor_" .. tostring(placeId) .. ".json"
+    local data = {
+        cursor = cursor,
+        pageNumber = pageNumber,
+        timestamp = os.time()
+    }
 
-    local success, response = pcall(function()
-        return httprequest({
-            Url = url,
-            Method = "POST",
-            Headers = {
-                ["Authorization"] = "Bearer " .. Tools.apiKey,
-                ["Content-Type"] = "application/json"
-            }
-        })
+    local success = pcall(function()
+        local jsonData = HttpService:JSONEncode(data)
+        write(filename, jsonData)
     end)
 
-    return success and response.StatusCode == 200
+    return success
 end
 
--- Очистить курсор
+-- Очистить курсор из локального хранилища
 function Tools.clearCursor(placeId)
-    if not httprequest then
+    local delfile = delfile or delete_file or (syn and syn.delete_file)
+    
+    if not delfile then
         return false
     end
 
-    local success, response = pcall(function()
-        return httprequest({
-            Url = Tools.apiUrl .. "/cursor/clear?place_id=" .. tostring(placeId),
-            Method = "DELETE",
-            Headers = {
-                ["Authorization"] = "Bearer " .. Tools.apiKey,
-                ["Content-Type"] = "application/json"
-            }
-        })
+    local filename = "cursor_" .. tostring(placeId) .. ".json"
+
+    local success = pcall(function()
+        delfile(filename)
     end)
 
-    return success and response.StatusCode == 200
+    return success
 end
 
 -- ============================================

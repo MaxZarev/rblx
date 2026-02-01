@@ -1,12 +1,12 @@
 local V = 'v1.1.0'
-local PLACE_ID = 920587237  -- ID игры Adopt Me на платформе Roblox
-local MIN_PLAYERS_PREFERRED = 5  -- Предпочтительное минимальное количество игроков на сервере
+local PLACE_ID = 920587237 
+local MIN_PLAYERS_PREFERRED = 5 
 local MAX_PLAYERS_ALLOWED = 100  -- Максимальное количество игроков (принимаем почти любой сервер)
 local SEARCH_TIMEOUT = 60  -- Таймаут поиска в секундах, после которого снижаются требования
 local TELEPORT_COOLDOWN = 15  -- Задержка перед телепортацией (сокращенная)
 local SCRIPT_URL = "https://raw.githubusercontent.com/MaxZarev/rblx/refs/heads/main/use_tools.lua"
 
-local WATCHDOG_TIMEOUT = 720
+local WATCHDOG_TIMEOUT = 360
 
 local API_URL = "https://aerogenic-averi-subnutritiously.ngrok-free.dev"
 
@@ -15,6 +15,8 @@ local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev
 
 
 local API_KEY = Auth.getApiKey()
+
+Auth.initSettingsMenu()
 
 if _G.BotRunning then
     Tools.sendMessageAPI("Скрипт уже запущен!")

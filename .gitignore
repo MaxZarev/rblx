@@ -1,0 +1,10 @@
+old/button_listener.lua
+old/chat_parser.lua
+old/init_messages.py
+old/messages_generator.py
+old/simple_button_listener.lua
+old/test_chat_send.lua
+old/test_dialogapp_properties.lua
+old/test_find_adoption_button.lua
+old/test_find_and_click_adoption.lua
+old/track_button_clicks.lua

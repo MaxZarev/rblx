@@ -895,7 +895,7 @@ function Tools.serverHop()
                 local notVisited = not visitedSet[serverId]
 
                 if playerCount >= currentMinPlayers and
-                   freeSlots >= 10 and
+                   freeSlots >= 7 and
                    playerCount <= Tools.maxPlayersAllowed and
                    serverId ~= game.JobId and
                    notVisited then

@@ -960,25 +960,14 @@ function Tools.getRecentChatMessages(count)
         table.insert(messages, Tools.chatMessageBuffer[i].text)
     end
 
-    Tools.sendMessageAPI("[CHAT_PARSE] Сообщений в буфере: " .. #Tools.chatMessageBuffer .. ", возвращаю: " .. #messages)
-
-    -- Логируем сообщения для диагностики
-    for i, msg in ipairs(messages) do
-        local shortMsg = #msg > 60 and (msg:sub(1, 60) .. "...") or msg
-        Tools.sendMessageAPI("[CHAT_PARSE] " .. i .. ": " .. shortMsg)
-    end
-
     return messages
 end
 
--- Проверить, было ли сообщение зафильтровано (содержит много ###)
 function Tools.isMessageFiltered(messages, hashThreshold)
     hashThreshold = hashThreshold or 3
 
-    Tools.sendMessageAPI("[FILTER_CHECK] Проверяю " .. #messages .. " сообщений на фильтрацию (порог: " .. hashThreshold .. "+ символов #)")
 
     for idx, msg in ipairs(messages) do
-        -- Считаем количество последовательных #
         local hashCount = 0
         local maxConsecutive = 0
 

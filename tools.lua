@@ -569,9 +569,13 @@ function Tools.sendMessageAPI(message)
         return false
     end
 
+    -- Добавляем bot_id (username игрока) для идентификации в админке
+    local botId = player and player.Name or "unknown"
+    local url = Tools.apiUrl .. "/send_chat?message=" .. HttpService:UrlEncode(message) .. "&bot_id=" .. HttpService:UrlEncode(botId)
+
     local success, result = pcall(function()
         return httprequest({
-            Url = Tools.apiUrl .. "/send_chat?message=" .. HttpService:UrlEncode(message),
+            Url = url,
             Method = "POST",
             Headers = {
                 ["Authorization"] = "Bearer " .. Tools.apiKey,
@@ -902,7 +906,6 @@ function Tools.connectChatListener()
                 end)
 
                 Tools.chatListenerConnected = true
-                Tools.sendMessageAPI("[CHAT_LISTENER] Подключен к RBXGeneral (TextChatService)")
                 return
             end
         end
@@ -932,7 +935,6 @@ function Tools.connectChatListener()
                 end)
 
                 Tools.chatListenerConnected = true
-                Tools.sendMessageAPI("[CHAT_LISTENER] Подключен к LegacyChat")
             end
         end
     end
@@ -1119,7 +1121,7 @@ function Tools.serverHop()
                 local notVisited = not visitedSet[serverId]
 
                 if playerCount >= currentMinPlayers and
-                   freeSlots >= 7 and
+                   freeSlots >= 10 and
                    playerCount <= Tools.maxPlayersAllowed and
                    serverId ~= game.JobId and
                    notVisited then

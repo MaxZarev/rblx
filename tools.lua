@@ -374,13 +374,6 @@ function Tools.setup(apiUrl, apiKey, minPlayersPreferred, maxPlayersAllowed, sea
     if placeId then Tools.placeId = placeId end
     if scriptUrl then Tools.scriptUrl = scriptUrl end
 
-    -- Создаем GUI и добавляем секцию API
-    local screenGui, frame = Tools.createToggleGUI()
-    
-    if Auth and Auth.addApiKeySection then
-        Auth.addApiKeySection(frame, 70)
-    end
-
     return Tools
 end
 

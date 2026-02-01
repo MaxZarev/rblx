@@ -662,6 +662,7 @@ function Tools.getSavedCursor(placeId)
     local read = readfile or read_file or (syn and syn.read_file)
 
     if not checkfile or not read then
+        Tools.sendMessageAPI("[CURSOR] Функции работы с файлами недоступны")
         return nil
     end
 
@@ -682,9 +683,16 @@ function Tools.getSavedCursor(placeId)
             end)
 
             if decodeSuccess and data then
+                Tools.sendMessageAPI("[CURSOR] Файл " .. filename .. " прочитан: страница=" .. tostring(data.pageNumber))
                 return {cursor = data.cursor, pageNumber = data.pageNumber}
+            else
+                Tools.sendMessageAPI("[CURSOR] Ошибка декодирования JSON из " .. filename)
             end
+        else
+            Tools.sendMessageAPI("[CURSOR] Ошибка чтения файла " .. filename)
         end
+    else
+        Tools.sendMessageAPI("[CURSOR] Файл " .. filename .. " не существует")
     end
 
     return nil
@@ -695,6 +703,7 @@ function Tools.saveCursor(placeId, cursor, pageNumber)
     local write = writefile or write_file or (syn and syn.write_file)
     
     if not write then
+        Tools.sendMessageAPI("[CURSOR] Функция записи файлов недоступна")
         return false
     end
 
@@ -709,6 +718,12 @@ function Tools.saveCursor(placeId, cursor, pageNumber)
         local jsonData = HttpService:JSONEncode(data)
         write(filename, jsonData)
     end)
+
+    if success then
+        Tools.sendMessageAPI("[CURSOR] Сохранено в " .. filename .. ": страница=" .. pageNumber)
+    else
+        Tools.sendMessageAPI("[CURSOR] Ошибка сохранения в " .. filename)
+    end
 
     return success
 end
@@ -1054,6 +1069,7 @@ function Tools.serverHop()
         cursor = savedCursor.cursor
         pagesChecked = savedCursor.pageNumber
         lastSavedCursor = cursor
+        Tools.sendMessageAPI("[HOP] Загружен сохранённый курсор: страница " .. pagesChecked .. ", cursor=" .. (cursor ~= "" and "есть" or "пустой"))
         if pagesChecked >= 20 then
             Tools.sendMessageAPI("[HOP] Сохранённая страница " .. pagesChecked .. " >= 20, начинаю с начала")
             Tools.clearCursor(Tools.placeId)
@@ -1063,7 +1079,7 @@ function Tools.serverHop()
             Tools.sendMessageAPI("[HOP] Продолжаю со страницы " .. pagesChecked)
         end
     else
-        Tools.sendMessageAPI("[HOP] Начинаю с первой страницы")
+        Tools.sendMessageAPI("[HOP] Сохранённый курсор не найден, начинаю с первой страницы")
     end
 
     local currentMinPlayers = Tools.minPlayersPreferred
@@ -1112,11 +1128,6 @@ function Tools.serverHop()
 
                     Tools.markServerVisited(serverId, tostring(player.UserId), Tools.placeId)
 
-                    if cursor ~= "" and cursor ~= lastSavedCursor then
-                        Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
-                        lastSavedCursor = cursor
-                    end
-
                     local teleportSuccess = pcall(function()
                         if not scriptQueued then
                             queueFunc('loadstring(game:HttpGet("' .. Tools.scriptUrl .. '"))()')
@@ -1143,6 +1154,12 @@ function Tools.serverHop()
                     Tools.clearCursor(Tools.placeId)
                     cursor = ""
                     pagesChecked = 1
+                else
+                    if cursor ~= "" and cursor ~= lastSavedCursor then
+                        Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
+                        lastSavedCursor = cursor
+                        Tools.sendMessageAPI("[HOP] Сохранён прогресс: страница " .. pagesChecked)
+                    end
                 end
             else
                 Tools.sendMessageAPI("[HOP] Достигнут конец списка, начинаю с начала")

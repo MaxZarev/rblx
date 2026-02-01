@@ -45,11 +45,6 @@ function Tools.createSettingsGUI(onStartCallback)
     local Players = game:GetService("Players")
     local player = Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
-    
-    local oldGui = playerGui:FindFirstChild("BotSettingsGUI")
-    if oldGui then
-        oldGui:Destroy()
-    end
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "BotSettingsGUI"
@@ -246,116 +241,6 @@ function Tools.loadSavedApiKey()
     end
 
     return nil
-end
-
--- Создание GUI с переключателем On/Off и настройками API
-function Tools.createToggleGUI()
-    -- Удаляем старый GUI если существует
-    local oldGui = playerGui:FindFirstChild("BotToggleGUI")
-    if oldGui then
-        oldGui:Destroy()
-    end
-
-    -- Создаем ScreenGui
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "BotToggleGUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-    -- Создаем Frame (фон) - увеличиваем высоту для секции API
-    local frame = Instance.new("Frame")
-    frame.Name = "ToggleFrame"
-    frame.Size = UDim2.new(0, 280, 0, 225)
-    frame.Position = UDim2.new(0, 10, 1, -235)
-    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    frame.Parent = screenGui
-
-    -- Скругленные углы
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = frame
-
-    -- Текст "Bot Status"
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, -20, 0, 20)
-    label.Position = UDim2.new(0, 10, 0, 5)
-    label.BackgroundTransparency = 1
-    label.Text = "🤖 Bot Status"
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 14
-    label.Font = Enum.Font.SourceSansBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    -- Кнопка переключения
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(1, -20, 0, 32)
-    toggleButton.Position = UDim2.new(0, 10, 0, 30)
-    toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-    toggleButton.Text = "ON"
-    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextSize = 14
-    toggleButton.Font = Enum.Font.SourceSansBold
-    toggleButton.Parent = frame
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 6)
-    buttonCorner.Parent = toggleButton
-
-    -- Обработчик клика
-    toggleButton.MouseButton1Click:Connect(function()
-        Tools.enabled = not Tools.enabled
-
-        if Tools.enabled then
-            toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-            toggleButton.Text = "ON"
-            Tools.sendMessageAPI("[GUI] Bot включен")
-        else
-            toggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-            toggleButton.Text = "OFF"
-            Tools.sendMessageAPI("[GUI] Bot выключен")
-        end
-    end)
-
-    -- Делаем фрейм перетаскиваемым
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
-
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement and dragStart and startPos then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    screenGui.Parent = playerGui
-    Tools.gui = screenGui
-
-    return screenGui, frame
 end
 
 -- Проверка, включен ли бот

@@ -68,8 +68,8 @@ function Tools.createSettingsGUI(onStartCallback)
 
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsFrame"
-    settingsFrame.Size = UDim2.new(0, 350, 0, 220)
-    settingsFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
+    settingsFrame.Size = UDim2.new(0, 350, 0, 300)
+    settingsFrame.Position = UDim2.new(0.5, -175, 0.5, -150)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     settingsFrame.BorderSizePixel = 2
     settingsFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -128,10 +128,47 @@ function Tools.createSettingsGUI(onStartCallback)
     inputPadding.PaddingLeft = UDim.new(0, 8)
     inputPadding.Parent = apiInput
 
+    -- Настройка минимального количества игроков
+    local minPlayersLabel = Instance.new("TextLabel")
+    minPlayersLabel.Name = "MinPlayersLabel"
+    minPlayersLabel.Size = UDim2.new(1, -20, 0, 20)
+    minPlayersLabel.Position = UDim2.new(0, 10, 0, 125)
+    minPlayersLabel.BackgroundTransparency = 1
+    minPlayersLabel.Text = "👥 Минимум игроков на сервере:"
+    minPlayersLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    minPlayersLabel.TextSize = 14
+    minPlayersLabel.Font = Enum.Font.SourceSansBold
+    minPlayersLabel.TextXAlignment = Enum.TextXAlignment.Left
+    minPlayersLabel.Parent = settingsFrame
+
+    local minPlayersInput = Instance.new("TextBox")
+    minPlayersInput.Name = "MinPlayersInput"
+    minPlayersInput.Size = UDim2.new(1, -20, 0, 35)
+    minPlayersInput.Position = UDim2.new(0, 10, 0, 150)
+    minPlayersInput.PlaceholderText = "5"
+    minPlayersInput.Text = tostring(Tools.minPlayersPreferred or 5)
+    minPlayersInput.TextColor3 = Color3.new(1, 1, 1)
+    minPlayersInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    minPlayersInput.BorderSizePixel = 1
+    minPlayersInput.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    minPlayersInput.Font = Enum.Font.SourceSans
+    minPlayersInput.TextSize = 14
+    minPlayersInput.ClearTextOnFocus = false
+    minPlayersInput.TextXAlignment = Enum.TextXAlignment.Left
+    minPlayersInput.Parent = settingsFrame
+
+    local minPlayersCorner = Instance.new("UICorner")
+    minPlayersCorner.CornerRadius = UDim.new(0, 4)
+    minPlayersCorner.Parent = minPlayersInput
+
+    local minPlayersPadding = Instance.new("UIPadding")
+    minPlayersPadding.PaddingLeft = UDim.new(0, 8)
+    minPlayersPadding.Parent = minPlayersInput
+
     local startButton = Instance.new("TextButton")
     startButton.Name = "StartButton"
     startButton.Size = UDim2.new(1, -20, 0, 45)
-    startButton.Position = UDim2.new(0, 10, 0, 130)
+    startButton.Position = UDim2.new(0, 10, 0, 200)
     startButton.Text = "▶️ Старт"
     startButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
     startButton.BorderSizePixel = 0
@@ -147,7 +184,7 @@ function Tools.createSettingsGUI(onStartCallback)
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Name = "StatusLabel"
     statusLabel.Size = UDim2.new(1, -20, 0, 20)
-    statusLabel.Position = UDim2.new(0, 10, 0, 185)
+    statusLabel.Position = UDim2.new(0, 10, 0, 255)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Text = ""
     statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
@@ -158,6 +195,13 @@ function Tools.createSettingsGUI(onStartCallback)
 
     apiInput:GetPropertyChangedSignal("Text"):Connect(function()
         Tools.apiKey = apiInput.Text
+    end)
+
+    minPlayersInput:GetPropertyChangedSignal("Text"):Connect(function()
+        local num = tonumber(minPlayersInput.Text)
+        if num and num >= 1 and num <= 100 then
+            Tools.minPlayersPreferred = num
+        end
     end)
 
     settingsButton.MouseButton1Click:Connect(function()
@@ -184,12 +228,31 @@ function Tools.createSettingsGUI(onStartCallback)
             return
         end
 
+        -- Валидация минимального количества игроков
+        local minPlayers = tonumber(minPlayersInput.Text)
+        if not minPlayers or minPlayers < 1 or minPlayers > 100 then
+            statusLabel.Text = "⚠ Введите число от 1 до 100!"
+            statusLabel.TextColor3 = Color3.fromRGB(200, 150, 100)
+            task.delay(2, function()
+                statusLabel.Text = ""
+            end)
+            return
+        end
+
+        Tools.minPlayersPreferred = minPlayers
+
         local write = writefile or write_file or (syn and syn.write_file)
         if write and type(write) == "function" then
             pcall(function()
                 write("password.txt", Tools.apiKey)
             end)
         end
+
+        -- Сохраняем конфигурацию
+        local config = {
+            minPlayersPreferred = Tools.minPlayersPreferred
+        }
+        Tools.saveConfig(config)
 
         Tools.botState.running = true
         Tools.botState.settingsVisible = false
@@ -236,6 +299,53 @@ function Tools.loadSavedApiKey()
             if readSuccess and savedKey and savedKey ~= "" then
                 Tools.apiKey = savedKey
                 return savedKey
+            end
+        end
+    end
+
+    return nil
+end
+
+-- Сохранить конфигурацию
+function Tools.saveConfig(config)
+    local write = writefile or write_file or (syn and syn.write_file)
+    if not write or type(write) ~= "function" then
+        return false
+    end
+
+    local HttpService = game:GetService("HttpService")
+    local success = pcall(function()
+        local jsonConfig = HttpService:JSONEncode(config)
+        write("bot_config.json", jsonConfig)
+    end)
+
+    return success
+end
+
+-- Загрузить конфигурацию
+function Tools.loadConfig()
+    local checkfile = isfile or isfile_custom or (syn and syn.is_file)
+    local read = readfile or read_file or (syn and syn.read_file)
+
+    if checkfile and read and type(checkfile) == "function" and type(read) == "function" then
+        local success, fileExists = pcall(function()
+            return checkfile("bot_config.json")
+        end)
+
+        if success and fileExists then
+            local readSuccess, configJson = pcall(function()
+                return read("bot_config.json")
+            end)
+
+            if readSuccess and configJson and configJson ~= "" then
+                local HttpService = game:GetService("HttpService")
+                local decodeSuccess, config = pcall(function()
+                    return HttpService:JSONDecode(configJson)
+                end)
+
+                if decodeSuccess and config then
+                    return config
+                end
             end
         end
     end

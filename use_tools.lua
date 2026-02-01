@@ -1,4 +1,4 @@
-local V = 'v1.2.0'
+local V = 'v1.3.0'
 local PLACE_ID = 920587237 
 local MIN_PLAYERS_PREFERRED = 5 
 local MAX_PLAYERS_ALLOWED = 100
@@ -108,6 +108,14 @@ local function runBot()
 end
 
 local savedApiKey = Tools.loadSavedApiKey()
+local savedConfig = Tools.loadConfig()
+
+if savedConfig then
+    if savedConfig.minPlayersPreferred then
+        MIN_PLAYERS_PREFERRED = savedConfig.minPlayersPreferred
+        Tools.minPlayersPreferred = savedConfig.minPlayersPreferred
+    end
+end
 
 if savedApiKey then
     local botState = Tools.getBotState()

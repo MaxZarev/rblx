@@ -24,7 +24,11 @@ local Tools = {
     placeId = 920587237,
     scriptUrl = "",
     enabled = true,  
-    gui = nil,       
+    gui = nil,
+    botState = {
+        running = false,
+        settingsVisible = false
+    }
 }
 
 local function shuffleArray(arr)
@@ -34,6 +38,214 @@ local function shuffleArray(arr)
         arr[i], arr[j] = arr[j], arr[i]
     end
     return arr
+end
+
+-- Создание GUI с настройками бота
+function Tools.createSettingsGUI(onStartCallback)
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    local oldGui = playerGui:FindFirstChild("BotSettingsGUI")
+    if oldGui then
+        oldGui:Destroy()
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BotSettingsGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local settingsButton = Instance.new("TextButton")
+    settingsButton.Name = "SettingsButton"
+    settingsButton.Size = UDim2.new(0, 120, 0, 40)
+    settingsButton.Position = UDim2.new(0, 10, 1, -50)
+    settingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    settingsButton.Text = "⚙️ Настройки"
+    settingsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    settingsButton.TextSize = 14
+    settingsButton.Font = Enum.Font.SourceSansBold
+    settingsButton.Parent = screenGui
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = settingsButton
+
+    local settingsFrame = Instance.new("Frame")
+    settingsFrame.Name = "SettingsFrame"
+    settingsFrame.Size = UDim2.new(0, 350, 0, 220)
+    settingsFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
+    settingsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    settingsFrame.BorderSizePixel = 2
+    settingsFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    settingsFrame.Visible = false
+    settingsFrame.Parent = screenGui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 8)
+    frameCorner.Parent = settingsFrame
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -20, 0, 30)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "🤖 Настройки бота"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 18
+    title.Font = Enum.Font.SourceSansBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = settingsFrame
+
+    local apiLabel = Instance.new("TextLabel")
+    apiLabel.Name = "ApiLabel"
+    apiLabel.Size = UDim2.new(1, -20, 0, 20)
+    apiLabel.Position = UDim2.new(0, 10, 0, 50)
+    apiLabel.BackgroundTransparency = 1
+    apiLabel.Text = "🔑 API Ключ:"
+    apiLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    apiLabel.TextSize = 14
+    apiLabel.Font = Enum.Font.SourceSansBold
+    apiLabel.TextXAlignment = Enum.TextXAlignment.Left
+    apiLabel.Parent = settingsFrame
+
+    local apiInput = Instance.new("TextBox")
+    apiInput.Name = "ApiInput"
+    apiInput.Size = UDim2.new(1, -20, 0, 40)
+    apiInput.Position = UDim2.new(0, 10, 0, 75)
+    apiInput.PlaceholderText = "Введите ваш API ключ"
+    apiInput.Text = Tools.apiKey
+    apiInput.TextColor3 = Color3.new(1, 1, 1)
+    apiInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    apiInput.BorderSizePixel = 1
+    apiInput.BorderColor3 = Color3.fromRGB(70, 70, 70)
+    apiInput.Font = Enum.Font.SourceSans
+    apiInput.TextSize = 14
+    apiInput.ClearTextOnFocus = false
+    apiInput.TextXAlignment = Enum.TextXAlignment.Left
+    apiInput.Parent = settingsFrame
+
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 4)
+    inputCorner.Parent = apiInput
+
+    local inputPadding = Instance.new("UIPadding")
+    inputPadding.PaddingLeft = UDim.new(0, 8)
+    inputPadding.Parent = apiInput
+
+    local startButton = Instance.new("TextButton")
+    startButton.Name = "StartButton"
+    startButton.Size = UDim2.new(1, -20, 0, 45)
+    startButton.Position = UDim2.new(0, 10, 0, 130)
+    startButton.Text = "▶️ Старт"
+    startButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+    startButton.BorderSizePixel = 0
+    startButton.TextColor3 = Color3.new(1, 1, 1)
+    startButton.Font = Enum.Font.SourceSansBold
+    startButton.TextSize = 16
+    startButton.Parent = settingsFrame
+
+    local startCorner = Instance.new("UICorner")
+    startCorner.CornerRadius = UDim.new(0, 6)
+    startCorner.Parent = startButton
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(1, -20, 0, 20)
+    statusLabel.Position = UDim2.new(0, 10, 0, 185)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = ""
+    statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+    statusLabel.TextSize = 12
+    statusLabel.Font = Enum.Font.SourceSans
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+    statusLabel.Parent = settingsFrame
+
+    apiInput:GetPropertyChangedSignal("Text"):Connect(function()
+        Tools.apiKey = apiInput.Text
+    end)
+
+    settingsButton.MouseButton1Click:Connect(function()
+        Tools.botState.running = false
+        Tools.botState.settingsVisible = not Tools.botState.settingsVisible
+        settingsFrame.Visible = Tools.botState.settingsVisible
+        
+        if Tools.botState.settingsVisible then
+            settingsButton.Text = "❌ Закрыть"
+            settingsButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+        else
+            settingsButton.Text = "⚙️ Настройки"
+            settingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        end
+    end)
+
+    startButton.MouseButton1Click:Connect(function()
+        if Tools.apiKey == "" then
+            statusLabel.Text = "⚠ Введите API ключ!"
+            statusLabel.TextColor3 = Color3.fromRGB(200, 150, 100)
+            task.delay(2, function()
+                statusLabel.Text = ""
+            end)
+            return
+        end
+
+        local write = writefile or write_file or (syn and syn.write_file)
+        if write and type(write) == "function" then
+            pcall(function()
+                write("password.txt", Tools.apiKey)
+            end)
+        end
+
+        Tools.botState.running = true
+        Tools.botState.settingsVisible = false
+        settingsFrame.Visible = false
+        settingsButton.Text = "⚙️ Настройки"
+        settingsButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+        statusLabel.Text = "✓ Запуск..."
+        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+
+        if onStartCallback then
+            task.spawn(function()
+                onStartCallback()
+            end)
+        end
+    end)
+
+    screenGui.Parent = playerGui
+    Tools.gui = screenGui
+
+    return screenGui
+end
+
+-- Получить состояние бота
+function Tools.getBotState()
+    return Tools.botState
+end
+
+-- Загрузить сохраненный API ключ
+function Tools.loadSavedApiKey()
+    local checkfile = isfile or isfile_custom or (syn and syn.is_file)
+    local read = readfile or read_file or (syn and syn.read_file)
+
+    if checkfile and read and type(checkfile) == "function" and type(read) == "function" then
+        local success, fileExists = pcall(function()
+            return checkfile("password.txt")
+        end)
+
+        if success and fileExists then
+            local readSuccess, savedKey = pcall(function()
+                return read("password.txt")
+            end)
+
+            if readSuccess and savedKey and savedKey ~= "" then
+                Tools.apiKey = savedKey
+                return savedKey
+            end
+        end
+    end
+
+    return nil
 end
 
 -- Создание GUI с переключателем On/Off и настройками API

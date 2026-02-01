@@ -687,7 +687,6 @@ function Tools.getSavedCursor(placeId)
             end)
 
             if decodeSuccess and data then
-                Tools.sendMessageAPI("[CURSOR] Файл " .. filename .. " прочитан: страница=" .. tostring(data.pageNumber))
                 return {cursor = data.cursor, pageNumber = data.pageNumber}
             else
                 Tools.sendMessageAPI("[CURSOR] Ошибка декодирования JSON из " .. filename)
@@ -723,9 +722,7 @@ function Tools.saveCursor(placeId, cursor, pageNumber)
         write(filename, jsonData)
     end)
 
-    if success then
-        Tools.sendMessageAPI("[CURSOR] Сохранено в " .. filename .. ": страница=" .. pageNumber)
-    else
+    if not success then
         Tools.sendMessageAPI("[CURSOR] Ошибка сохранения в " .. filename)
     end
 

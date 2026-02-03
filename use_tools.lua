@@ -29,26 +29,26 @@ local function runBot()
 
     task.spawn(function()
         task.wait(WATCHDOG_TIMEOUT)
-        
-        pcall(function() Tools.sendMessageAPI("[WATCHDOG-1] Таймаут " .. WATCHDOG_TIMEOUT .. "с") end)
-        
+
+        pcall(function() Tools.logWarning("Watchdog таймаут", {category = "WATCHDOG", timeout = WATCHDOG_TIMEOUT}) end)
+
         for i = 1, 3 do
             pcall(function() Tools.serverHop() end)
             task.wait(30)
         end
-        
+
         pcall(function()
             game:GetService("TeleportService"):Teleport(PLACE_ID, player)
         end)
     end)
 
-    Tools.sendMessageAPI("Скрипт запущен " .. V)
+    Tools.logInfo("Скрипт запущен", {category = "BOT", version = V})
     Tools.connectChatListener()
 
     Tools.randomDelay(3, 7)
 
     if not botState.running then
-        Tools.sendMessageAPI("[BOT] Остановлен пользователем")
+        Tools.logInfo("Остановлен пользователем", {category = "BOT"})
         return
     end
 
@@ -56,19 +56,19 @@ local function runBot()
         Tools.randomDelay(3, 6)
         Tools.clickPlayButton()
     else
-        Tools.sendMessageAPI("PlayButton не найден")
+        Tools.logWarning("PlayButton не найден", {category = "BOT"})
     end
 
     if Tools.waitForAdoptionIslandButton(20) then
         Tools.randomDelay(3, 6)
         local success, message = Tools.clickAdoptionIslandButton()
         if not success then
-            Tools.sendMessageAPI("Клик по кнопке Adoption Island не выполнен")
+            Tools.logWarning("Клик по кнопке Adoption Island не выполнен", {category = "BOT"})
         end
     end
 
     if not botState.running then
-        Tools.sendMessageAPI("[BOT] Остановлен пользователем")
+        Tools.logInfo("Остановлен пользователем", {category = "BOT"})
         return
     end
 
@@ -80,7 +80,7 @@ local function runBot()
     Tools.randomDelay(8, 15)
 
     if not botState.running then
-        Tools.sendMessageAPI("[BOT] Остановлен пользователем")
+        Tools.logInfo("Остановлен пользователем", {category = "BOT"})
         return
     end
 
@@ -91,13 +91,13 @@ local function runBot()
         Tools.checkAndDeactivateIfFiltered(adData.id, 2)
     else
         Tools.sendChat("RBLX . PW - sell you pets for real money")
-        Tools.sendMessageAPI("[AD] Fallback")
+        Tools.logWarning("Использован fallback для рекламного сообщения", {category = "AD"})
     end
 
     Tools.randomDelay(5, 10)
 
     if not botState.running then
-        Tools.sendMessageAPI("[BOT] Остановлен пользователем")
+        Tools.logInfo("Остановлен пользователем", {category = "BOT"})
         return
     end
 

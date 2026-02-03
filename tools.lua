@@ -558,7 +558,7 @@ function Tools.sendChat(msg)
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
     Tools.randomDelay(0.03, 0.07)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-    Tools.sendMessageAPI("[CHAT] Sent: " .. msg)
+    Tools.logInfo("Сообщение отправлено в чат", {category = "CHAT", message = msg})
 
 end
 
@@ -571,7 +571,7 @@ function Tools.sendMessageAPI(message)
 
     -- Добавляем bot_id (username игрока) для идентификации в админке
     local botId = player and player.Name or "unknown"
-    local url = Tools.apiUrl .. "/send_chat?message=" .. HttpService:UrlEncode(message) .. "&bot_id=" .. HttpService:UrlEncode(botId)
+    local url = Tools.apiUrl .. "/log?level=INFO&message=" .. HttpService:UrlEncode(message) .. "&bot_id=" .. HttpService:UrlEncode(botId)
 
     local success, result = pcall(function()
         return httprequest({
@@ -592,6 +592,146 @@ function Tools.sendMessageAPI(message)
         return false
     end
 end
+
+
+-- ============================================
+-- ФУНКЦИИ СТРУКТУРИРОВАННОГО ЛОГИРОВАНИЯ
+-- ============================================
+
+-- Отправить структурированный лог на сервер
+-- level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+-- message: текст сообщения
+-- context: таблица с дополнительными данными (опционально)
+function Tools.sendLog(level, message, context)
+    if not httprequest then
+        warn("[LOG] HTTP функция недоступна")
+        return false
+    end
+
+    level = level or "INFO"
+    local botId = player and player.Name or "unknown"
+
+    -- Формируем URL с query параметрами
+    local url = Tools.apiUrl .. "/log?level=" .. HttpService:UrlEncode(level)
+        .. "&message=" .. HttpService:UrlEncode(message)
+        .. "&bot_id=" .. HttpService:UrlEncode(botId)
+
+    -- Подготавливаем тело запроса с контекстом
+    local body = nil
+    if context and type(context) == "table" then
+        local ok, jsonBody = pcall(function()
+            return HttpService:JSONEncode(context)
+        end)
+        if ok then
+            body = jsonBody
+        end
+    end
+
+    local success, result = pcall(function()
+        return httprequest({
+            Url = url,
+            Method = "POST",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            },
+            Body = body
+        })
+    end)
+
+    if success and result.StatusCode == 200 then
+        return true
+    else
+        -- Fallback на старый метод если новый не работает
+        Tools.sendMessageAPI("[" .. level .. "] " .. message)
+        return false
+    end
+end
+
+-- Хелперы для разных уровней логирования
+function Tools.logDebug(message, context)
+    return Tools.sendLog("DEBUG", message, context)
+end
+
+function Tools.logInfo(message, context)
+    return Tools.sendLog("INFO", message, context)
+end
+
+function Tools.logWarning(message, context)
+    return Tools.sendLog("WARNING", message, context)
+end
+
+function Tools.logError(message, context)
+    return Tools.sendLog("ERROR", message, context)
+end
+
+function Tools.logCritical(message, context)
+    return Tools.sendLog("CRITICAL", message, context)
+end
+
+
+-- ============================================
+-- ЗАГРУЗКА КОНФИГУРАЦИИ С СЕРВЕРА
+-- ============================================
+
+-- Кэш конфигурации
+Tools.remoteConfig = nil
+Tools.remoteConfigTimestamp = 0
+Tools.remoteConfigCacheTTL = 300 -- 5 минут
+
+-- Загрузить конфигурацию с сервера
+function Tools.loadRemoteConfig(forceRefresh)
+    if not httprequest then
+        warn("[CONFIG] HTTP функция недоступна")
+        return nil
+    end
+
+    -- Проверяем кэш
+    local now = os.time()
+    if not forceRefresh and Tools.remoteConfig and (now - Tools.remoteConfigTimestamp) < Tools.remoteConfigCacheTTL then
+        return Tools.remoteConfig
+    end
+
+    local botId = player and player.Name or "unknown"
+    local url = Tools.apiUrl .. "/bot/config?bot_id=" .. HttpService:UrlEncode(botId)
+
+    local success, response = pcall(function()
+        return httprequest({
+            Url = url,
+            Method = "GET",
+            Headers = {
+                ["Authorization"] = "Bearer " .. Tools.apiKey,
+                ["Content-Type"] = "application/json"
+            }
+        })
+    end)
+
+    if success and response.StatusCode == 200 then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(response.Body)
+        end)
+
+        if ok and data.success and data.config then
+            Tools.remoteConfig = data.config
+            Tools.remoteConfigTimestamp = now
+            Tools.logInfo("Конфигурация загружена с сервера", {keys = #data.config})
+            return data.config
+        end
+    end
+
+    Tools.logWarning("Не удалось загрузить конфигурацию с сервера")
+    return nil
+end
+
+-- Получить значение из удалённой конфигурации
+function Tools.getRemoteConfigValue(key, defaultValue)
+    local config = Tools.loadRemoteConfig()
+    if config and config[key] ~= nil then
+        return config[key]
+    end
+    return defaultValue
+end
+
 
 -- Получить список посещенных серверов
 function Tools.getVisitedServers(hours)
@@ -615,18 +755,18 @@ function Tools.getVisitedServers(hours)
     if success and response.StatusCode == 200 then
         local data = HttpService:JSONDecode(response.Body)
         if data.success then
-            Tools.sendMessageAPI("[SERVERS] Загружено " .. data.count .. " посещенных серверов")
+            Tools.logDebug("Загружено посещенных серверов", {category = "SERVERS", count = data.count})
             return data.servers
         end
     else
-        warn("[SERVERS] Ошибка загрузки серверов:", response and response.StatusCode or "unknown")
+        Tools.logWarning("Ошибка загрузки серверов", {category = "SERVERS", status = response and response.StatusCode or "unknown"})
     end
 
     return {}
 end
 
 -- Отметить сервер как посещенный
-function Tools.markServerVisited(serverId, placeId)
+function Tools.markServerVisited(serverId, placeId, playerCount)
     if not httprequest then
         warn("[SERVERS] HTTP функция недоступна!")
         return false
@@ -636,6 +776,9 @@ function Tools.markServerVisited(serverId, placeId)
     local url = Tools.apiUrl .. "/servers/visit?server_id=" .. HttpService:UrlEncode(serverId) .. "&bot_id=" .. HttpService:UrlEncode(botId)
     if placeId then
         url = url .. "&place_id=" .. tostring(placeId)
+    end
+    if playerCount then
+        url = url .. "&player_count=" .. tostring(playerCount)
     end
 
     local success, response = pcall(function()
@@ -650,10 +793,10 @@ function Tools.markServerVisited(serverId, placeId)
     end)
 
     if success and response.StatusCode == 200 then
-        Tools.sendMessageAPI("[SERVERS] Сервер отмечен как посещенный: " .. serverId)
+        Tools.logDebug("Сервер отмечен как посещенный", {category = "SERVERS", server_id = serverId})
         return true
     else
-        warn("[SERVERS] Ошибка записи сервера:", response and response.StatusCode or "unknown")
+        Tools.logWarning("Ошибка записи сервера", {category = "SERVERS", server_id = serverId, status = response and response.StatusCode or "unknown"})
         return false
     end
 end
@@ -664,7 +807,7 @@ function Tools.getSavedCursor(placeId)
     local read = readfile or read_file or (syn and syn.read_file)
 
     if not checkfile or not read then
-        Tools.sendMessageAPI("[CURSOR] Функции работы с файлами недоступны")
+        Tools.logWarning("Функции работы с файлами недоступны", {category = "CURSOR"})
         return nil
     end
 
@@ -687,13 +830,13 @@ function Tools.getSavedCursor(placeId)
             if decodeSuccess and data then
                 return {cursor = data.cursor, pageNumber = data.pageNumber}
             else
-                Tools.sendMessageAPI("[CURSOR] Ошибка декодирования JSON из " .. filename)
+                Tools.logWarning("Ошибка декодирования JSON", {category = "CURSOR", filename = filename})
             end
         else
-            Tools.sendMessageAPI("[CURSOR] Ошибка чтения файла " .. filename)
+            Tools.logWarning("Ошибка чтения файла", {category = "CURSOR", filename = filename})
         end
     else
-        Tools.sendMessageAPI("[CURSOR] Файл " .. filename .. " не существует")
+        Tools.logDebug("Файл курсора не существует", {category = "CURSOR", filename = filename})
     end
 
     return nil
@@ -702,9 +845,9 @@ end
 -- Сохранить курсор в локальное хранилище
 function Tools.saveCursor(placeId, cursor, pageNumber)
     local write = writefile or write_file or (syn and syn.write_file)
-    
+
     if not write then
-        Tools.sendMessageAPI("[CURSOR] Функция записи файлов недоступна")
+        Tools.logWarning("Функция записи файлов недоступна", {category = "CURSOR"})
         return false
     end
 
@@ -721,7 +864,7 @@ function Tools.saveCursor(placeId, cursor, pageNumber)
     end)
 
     if not success then
-        Tools.sendMessageAPI("[CURSOR] Ошибка сохранения в " .. filename)
+        Tools.logError("Ошибка сохранения курсора", {category = "CURSOR", filename = filename})
     end
 
     return success
@@ -935,7 +1078,7 @@ function Tools.connectChatListener()
     end
 
     if not Tools.chatListenerConnected then
-        Tools.sendMessageAPI("[CHAT_LISTENER] ОШИБКА: Не удалось подключиться к чату!")
+        Tools.logError("Не удалось подключиться к чату", {category = "CHAT_LISTENER"})
     end
 
     return Tools.chatListenerConnected
@@ -979,16 +1122,16 @@ function Tools.isMessageFiltered(messages, hashThreshold)
         end
 
         if maxConsecutive > 0 then
-            Tools.sendMessageAPI("[FILTER_CHECK] Сообщение " .. idx .. " содержит " .. maxConsecutive .. " подряд символов #")
+            Tools.logDebug("Найдены символы # в сообщении", {category = "FILTER_CHECK", message_idx = idx, hash_count = maxConsecutive})
         end
 
         if maxConsecutive > hashThreshold then
-            Tools.sendMessageAPI("[FILTER_CHECK] ОБНАРУЖЕНА ФИЛЬТРАЦИЯ в сообщении " .. idx)
+            Tools.logWarning("Обнаружена фильтрация в сообщении", {category = "FILTER_CHECK", message_idx = idx})
             return true, msg
         end
     end
 
-    Tools.sendMessageAPI("[FILTER_CHECK] Фильтрация не обнаружена")
+    Tools.logDebug("Фильтрация не обнаружена", {category = "FILTER_CHECK"})
     return false, nil
 end
 
@@ -996,7 +1139,7 @@ end
 function Tools.checkAndDeactivateIfFiltered(adMessageId, waitTime)
     waitTime = waitTime or 2
 
-    Tools.sendMessageAPI("[FILTER] Начинаю проверку фильтрации для ID:" .. tostring(adMessageId) .. ", жду " .. waitTime .. " сек...")
+    Tools.logInfo("Начинаю проверку фильтрации", {category = "FILTER", message_id = adMessageId, wait_time = waitTime})
 
     -- Ждем пока сообщение появится в чате
     task.wait(waitTime)
@@ -1004,10 +1147,10 @@ function Tools.checkAndDeactivateIfFiltered(adMessageId, waitTime)
     -- Получаем последние 10 сообщений
     local recentMessages = Tools.getRecentChatMessages(10)
 
-    Tools.sendMessageAPI("[FILTER] Получено сообщений для анализа: " .. #recentMessages)
+    Tools.logDebug("Получено сообщений для анализа", {category = "FILTER", count = #recentMessages})
 
     if #recentMessages == 0 then
-        Tools.sendMessageAPI("[FILTER] ПРЕДУПРЕЖДЕНИЕ: Не удалось получить сообщения из чата!")
+        Tools.logWarning("Не удалось получить сообщения из чата", {category = "FILTER"})
         return false
     end
 
@@ -1015,22 +1158,21 @@ function Tools.checkAndDeactivateIfFiltered(adMessageId, waitTime)
     local wasFiltered, filteredMsg = Tools.isMessageFiltered(recentMessages, 3)
 
     if wasFiltered then
-        Tools.sendMessageAPI("[FILTER] !!! ФИЛЬТРАЦИЯ ОБНАРУЖЕНА !!!")
-        Tools.sendMessageAPI("[FILTER] Зафильтрованное сообщение: " .. (filteredMsg or "unknown"))
+        Tools.logWarning("Фильтрация обнаружена!", {category = "FILTER", message_id = adMessageId, filtered_text = filteredMsg})
 
         -- Деактивируем сообщение
         if adMessageId then
             local success = Tools.deactivateAdMessage(adMessageId)
             if success then
-                Tools.sendMessageAPI("[FILTER] Сообщение ID:" .. adMessageId .. " ДЕАКТИВИРОВАНО")
+                Tools.logInfo("Сообщение деактивировано", {category = "FILTER", message_id = adMessageId})
             else
-                Tools.sendMessageAPI("[FILTER] ОШИБКА деактивации сообщения ID:" .. adMessageId)
+                Tools.logError("Ошибка деактивации сообщения", {category = "FILTER", message_id = adMessageId})
             end
         end
 
         return true
     else
-        Tools.sendMessageAPI("[FILTER] Сообщение прошло без фильтрации")
+        Tools.logInfo("Сообщение прошло без фильтрации", {category = "FILTER", message_id = adMessageId})
     end
 
     return false
@@ -1038,7 +1180,7 @@ end
 
 
 function Tools.serverHop()
-    Tools.sendMessageAPI("[HOP] Начинаю переключение сервера...")
+    Tools.logInfo("Начинаю переключение сервера", {category = "HOP"})
 
     local visitedServers = Tools.getVisitedServers(12)
     local visitedSet = {}
@@ -1056,24 +1198,24 @@ function Tools.serverHop()
         pagesChecked = savedCursor.pageNumber
         lastSavedCursor = cursor
         if pagesChecked >= 20 then
-            Tools.sendMessageAPI("[HOP] Сохранённая страница " .. pagesChecked .. " >= 20, начинаю с начала")
+            Tools.logInfo("Сброс курсора: страница >= 20", {category = "HOP", page = pagesChecked})
             Tools.clearCursor(Tools.placeId)
             cursor = ""
             pagesChecked = 1
         else
-            Tools.sendMessageAPI("[HOP] Продолжаю со страницы " .. pagesChecked)
+            Tools.logDebug("Продолжаю со страницы", {category = "HOP", page = pagesChecked})
         end
     else
-        Tools.sendMessageAPI("[HOP] Сохранённый курсор не найден, начинаю с первой страницы")
+        Tools.logDebug("Курсор не найден, начинаю с первой страницы", {category = "HOP"})
     end
 
     local currentMinPlayers = Tools.minPlayersPreferred
     local consecutiveRateLimits = 0
-    Tools.sendMessageAPI("[HOP] Ищу серверы с " .. currentMinPlayers .. "+ игроков. Максимальное количество игроков: " .. Tools.maxPlayersAllowed)
+    Tools.logInfo("Поиск серверов", {category = "HOP", min_players = currentMinPlayers, max_players = Tools.maxPlayersAllowed})
 
     while true do
         if not Tools.isEnabled() then
-            Tools.sendMessageAPI("[HOP] Остановлено пользователем")
+            Tools.logInfo("Остановлено пользователем", {category = "HOP"})
             return false
         end
 
@@ -1083,7 +1225,7 @@ function Tools.serverHop()
             cursor ~= "" and "&cursor=" .. cursor or ""
         )
 
-        Tools.sendMessageAPI("[HOP] Страница " .. pagesChecked .. "...")
+        Tools.logDebug("Загрузка страницы", {category = "HOP", page = pagesChecked})
 
         local success, response = pcall(function()
             return httprequest({Url = url})
@@ -1109,9 +1251,15 @@ function Tools.serverHop()
                    serverId ~= game.JobId and
                    notVisited then
 
-                    Tools.sendMessageAPI("[HOP] Найден сервер: " .. playerCount .. "/" .. maxPlayers .. " игроков (свободно: " .. freeSlots .. ")")
+                    Tools.logInfo("Найден подходящий сервер", {
+                        category = "HOP",
+                        server_id = serverId,
+                        players = playerCount,
+                        max_players = maxPlayers,
+                        free_slots = freeSlots
+                    })
 
-                    Tools.markServerVisited(serverId, Tools.placeId)
+                    Tools.markServerVisited(serverId, Tools.placeId, playerCount)
 
                     local teleportSuccess = pcall(function()
                         if not scriptQueued then
@@ -1122,10 +1270,10 @@ function Tools.serverHop()
                     end)
 
                     if teleportSuccess then
-                        Tools.sendMessageAPI("[HOP] Телепортация...")
+                        Tools.logInfo("Телепортация на сервер", {category = "HOP", server_id = serverId})
                         return true
                     else
-                        Tools.sendMessageAPI("[HOP] Ошибка телепортации, продолжаю поиск...")
+                        Tools.logWarning("Ошибка телепортации, продолжаю поиск", {category = "HOP", server_id = serverId})
                     end
                 end
             end
@@ -1135,7 +1283,7 @@ function Tools.serverHop()
                 pagesChecked = pagesChecked + 1
 
                 if pagesChecked > 20 then
-                    Tools.sendMessageAPI("[HOP] Достигнут лимит 20 страниц, начинаю с начала")
+                    Tools.logInfo("Достигнут лимит страниц, сброс", {category = "HOP", page = pagesChecked})
                     Tools.clearCursor(Tools.placeId)
                     cursor = ""
                     pagesChecked = 1
@@ -1143,11 +1291,11 @@ function Tools.serverHop()
                     if cursor ~= "" and cursor ~= lastSavedCursor then
                         Tools.saveCursor(Tools.placeId, cursor, pagesChecked)
                         lastSavedCursor = cursor
-                        Tools.sendMessageAPI("[HOP] Сохранён прогресс: страница " .. pagesChecked)
+                        Tools.logDebug("Прогресс сохранён", {category = "HOP", page = pagesChecked})
                     end
                 end
             else
-                Tools.sendMessageAPI("[HOP] Достигнут конец списка, начинаю с начала")
+                Tools.logInfo("Достигнут конец списка, начинаю сначала", {category = "HOP"})
                 Tools.clearCursor(Tools.placeId)
                 cursor = ""
                 pagesChecked = 1
@@ -1155,18 +1303,18 @@ function Tools.serverHop()
         elseif success and response.StatusCode == 429 then
             consecutiveRateLimits = consecutiveRateLimits + 1
             local waitTime = math.min(10 * (2 ^ (consecutiveRateLimits - 1)), 120)
-            Tools.sendMessageAPI(string.format("[HOP] Rate limit (429). Жду %d сек...", waitTime))
+            Tools.logWarning("Rate limit, ожидание", {category = "HOP", wait_seconds = waitTime, attempt = consecutiveRateLimits})
 
             for _ = 1, waitTime do
                 if not Tools.isEnabled() then
-                    Tools.sendMessageAPI("[HOP] Остановлено пользователем во время ожидания")
+                    Tools.logInfo("Остановлено во время ожидания", {category = "HOP"})
                     return false
                 end
                 task.wait(1)
             end
         else
             consecutiveRateLimits = 0
-            Tools.sendMessageAPI("[HOP] Ошибка HTTP: " .. (response and response.StatusCode or "unknown"))
+            Tools.logError("Ошибка HTTP запроса", {category = "HOP", status = response and response.StatusCode or "unknown"})
             task.wait(5)
         end
     end

@@ -107,22 +107,6 @@ end
 -- Запускаем autoReconnect сразу при загрузке скрипта, независимо от состояния бота
 Tools.autoReconnect()
 
--- ТЕСТ: пинг каждые 2 секунды для проверки живости скрипта во время перехода
-task.spawn(function()
-    local pingCount = 0
-    while true do
-        task.wait(2)
-        pingCount = pingCount + 1
-        pcall(function()
-            Tools.logDebug("PING " .. pingCount, {
-                category = "PING",
-                job_id = tostring(game.JobId),
-                place_id = tostring(game.PlaceId),
-                ping = pingCount
-            })
-        end)
-    end
-end)
 
 local savedApiKey = Tools.loadSavedApiKey()
 local savedConfig = Tools.loadConfig()

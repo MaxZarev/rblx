@@ -1321,28 +1321,102 @@ function Tools.serverHop()
 end
 
 
--- Автоматический реконнект при ошибке во время загрузки сервера
+-- Автоматический реконнект при ошибке соединения
 function Tools.autoReconnect()
+    local GuiService = game:GetService("GuiService")
+
+    -- Ошибки при которых НЕ нужно переподключаться (кик, бан, дубликат и т.д.)
+    local noReconnectErrors = {
+        [Enum.ConnectionError.DisconnectLuaKick]              = true,
+        [Enum.ConnectionError.DisconnectSecurityKeyMismatch]  = true,
+        [Enum.ConnectionError.DisconnectNewSecurityKeyMismatch] = true,
+        [Enum.ConnectionError.DisconnectDuplicateTicket]      = true,
+        [Enum.ConnectionError.DisconnectWrongVersion]         = true,
+        [Enum.ConnectionError.DisconnectProtocolMismatch]     = true,
+        [Enum.ConnectionError.DisconnectIllegalTeleport]      = true,
+        [Enum.ConnectionError.DisconnectDuplicatePlayer]      = true,
+    }
+
+    -- Попытка кликнуть кнопку Reconnect: сначала точный путь, затем сканирование
+    local function tryClickReconnect()
+        pcall(function()
+            local cg = game:GetService("CoreGui")
+
+            -- Точный путь: RobloxPromptGui → promptOverlay → ErrorPrompt → ... → ReconnectButton
+            local promptGui = cg:FindFirstChild("RobloxPromptGui")
+            if promptGui then
+                local overlay = promptGui:FindFirstChild("promptOverlay")
+                local errorPrompt = overlay and overlay:FindFirstChild("ErrorPrompt")
+                local buttonArea = errorPrompt and errorPrompt:FindFirstChild("ButtonArea", true)
+                if buttonArea then
+                    local btn = buttonArea:FindFirstChild("ReconnectButton")
+                        or buttonArea:FindFirstChild("Reconnect")
+                    if btn then
+                        Tools.logWarning("Реконнект: клик по ReconnectButton (точный путь)", {category = "RECONNECT"})
+                        btn.MouseButton1Click:Fire()
+                        pcall(function() btn:Activate() end)
+                        return
+                    end
+                end
+            end
+
+            -- Fallback: перебираем всех потомков CoreGui
+            for _, obj in pairs(cg:GetDescendants()) do
+                if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                    local t = string.lower(obj.Text or obj.Name or "")
+                    if string.find(t, "reconnect") or string.find(t, "переподключ") then
+                        Tools.logWarning("Реконнект: клик через сканирование", {
+                            category = "RECONNECT",
+                            button_text = obj.Text or "",
+                            button_name = obj.Name
+                        })
+                        obj.MouseButton1Click:Fire()
+                        pcall(function() obj:Activate() end)
+                        return
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Основной слушатель: срабатывает мгновенно при появлении экрана ошибки
+    pcall(function()
+        GuiService.ErrorMessageChanged:Connect(function()
+            local errorCode = GuiService:GetErrorCode()
+            Tools.logWarning("Ошибка соединения обнаружена", {
+                category = "RECONNECT",
+                error_code = tostring(errorCode)
+            })
+            if noReconnectErrors[errorCode] then
+                Tools.logWarning("Реконнект пропущен: тип ошибки не допускает повторное подключение", {
+                    category = "RECONNECT",
+                    error_code = tostring(errorCode)
+                })
+                return
+            end
+            task.wait(1.5)
+            tryClickReconnect()
+        end)
+    end)
+
+    -- Резервный цикл на случай если событие не сработало
     task.spawn(function()
         while true do
-            task.wait(2)
+            task.wait(3)
             pcall(function()
                 local cg = game:GetService("CoreGui")
                 for _, obj in pairs(cg:GetDescendants()) do
                     if obj:IsA("TextButton") or obj:IsA("ImageButton") then
                         local t = string.lower(obj.Text or obj.Name or "")
-                        -- ищем reconnect на английском и русском
-                        if string.find(t, "reconnect")
-                            or string.find(t, "реконнект")
-                            or string.find(t, "переподключ") then
-                            Tools.logWarning("Обнаружена кнопка Reconnect, выполняю клик", {
+                        if string.find(t, "reconnect") or string.find(t, "переподключ") then
+                            Tools.logWarning("Реконнект: резервный цикл обнаружил кнопку", {
                                 category = "RECONNECT",
                                 button_text = obj.Text or "",
                                 button_name = obj.Name
                             })
                             obj.MouseButton1Click:Fire()
                             pcall(function() obj:Activate() end)
-                            task.wait(12)
+                            task.wait(5)
                         end
                     end
                 end

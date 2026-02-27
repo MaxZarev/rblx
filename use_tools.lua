@@ -1,4 +1,4 @@
-local V = 'v1.3.0'
+local V = 'v1.4.0'
 local PLACE_ID = 920587237 
 local MIN_PLAYERS_PREFERRED = 5 
 local MAX_PLAYERS_ALLOWED = 100
@@ -12,7 +12,7 @@ local Tools = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZare
 local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/auth.lua?t=" .. tick()))()
 
 if _G.BotRunning then
-    warn("Скрипт уже запущен! v1.1.0")
+    warn("Скрипт уже запущен!")
     return
 end
 _G.BotRunning = true

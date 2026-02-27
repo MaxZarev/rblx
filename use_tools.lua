@@ -43,6 +43,7 @@ local function runBot()
     end)
 
     Tools.logInfo("Скрипт запущен", {category = "BOT", version = V})
+    Tools.autoReconnect()
     Tools.connectChatListener()
 
     Tools.randomDelay(3, 7)

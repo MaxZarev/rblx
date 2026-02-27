@@ -1270,15 +1270,15 @@ function Tools.serverHop()
                     end)
 
                     if teleportSuccess then
-                        Tools.logInfo("Телепортация на сервер", {category = "HOP", server_id = serverId})
-                        return true
-                    else
-                        Tools.logWarning("Ошибка телепортации, продолжаю поиск", {category = "HOP", server_id = serverId})
-                    end
+    Tools.logInfo("Телепортация на сервер", {category = "HOP", server_id = serverId})
+                    return true
+                else
+                    Tools.logWarning("Ошибка телепортации, продолжаю поиск", {category = "HOP", server_id = serverId})
                 end
             end
+        end
 
-            if data.nextPageCursor then
+        if data.nextPageCursor then
                 cursor = data.nextPageCursor
                 pagesChecked = pagesChecked + 1
 
@@ -1318,6 +1318,30 @@ function Tools.serverHop()
             task.wait(5)
         end
     end
+end
+
+
+-- Автоматический реконнект при ошибке во время загрузки сервера
+function Tools.autoReconnect()
+    task.spawn(function()
+        while true do
+            task.wait(2)
+            pcall(function()
+                local cg = game:GetService("CoreGui")
+                for _, btn in pairs(cg:GetDescendants()) do
+                    if btn:IsA("TextButton") then
+                        local t = string.lower(btn.Text or "")
+                        if string.find(t, "reconnect") then
+                            Tools.logWarning("Обнаружена кнопка Reconnect, выполняю клик", {category = "RECONNECT"})
+                            btn.MouseButton1Click:Fire()
+                            pcall(function() btn:Activate() end)
+                            task.wait(12)
+                        end
+                    end
+                end
+            end)
+        end
+    end)
 end
 
 

@@ -43,7 +43,6 @@ local function runBot()
     end)
 
     Tools.logInfo("Скрипт запущен", {category = "BOT", version = V})
-    Tools.autoReconnect()
     Tools.connectChatListener()
 
     Tools.randomDelay(3, 7)
@@ -104,6 +103,9 @@ local function runBot()
 
     Tools.serverHop()
 end
+
+-- Запускаем autoReconnect сразу при загрузке скрипта, независимо от состояния бота
+Tools.autoReconnect()
 
 local savedApiKey = Tools.loadSavedApiKey()
 local savedConfig = Tools.loadConfig()

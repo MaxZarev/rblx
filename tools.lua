@@ -1328,13 +1328,20 @@ function Tools.autoReconnect()
             task.wait(2)
             pcall(function()
                 local cg = game:GetService("CoreGui")
-                for _, btn in pairs(cg:GetDescendants()) do
-                    if btn:IsA("TextButton") then
-                        local t = string.lower(btn.Text or "")
-                        if string.find(t, "reconnect") then
-                            Tools.logWarning("Обнаружена кнопка Reconnect, выполняю клик", {category = "RECONNECT"})
-                            btn.MouseButton1Click:Fire()
-                            pcall(function() btn:Activate() end)
+                for _, obj in pairs(cg:GetDescendants()) do
+                    if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                        local t = string.lower(obj.Text or obj.Name or "")
+                        -- ищем reconnect на английском и русском
+                        if string.find(t, "reconnect")
+                            or string.find(t, "реконнект")
+                            or string.find(t, "переподключ") then
+                            Tools.logWarning("Обнаружена кнопка Reconnect, выполняю клик", {
+                                category = "RECONNECT",
+                                button_text = obj.Text or "",
+                                button_name = obj.Name
+                            })
+                            obj.MouseButton1Click:Fire()
+                            pcall(function() obj:Activate() end)
                             task.wait(12)
                         end
                     end

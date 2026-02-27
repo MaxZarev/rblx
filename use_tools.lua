@@ -1,4 +1,4 @@
-local V = 'v1.11.0'
+local V = 'v1.12.0'
 local PLACE_ID = 920587237 
 local MIN_PLAYERS_PREFERRED = 5 
 local MAX_PLAYERS_ALLOWED = 100

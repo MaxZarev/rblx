@@ -1,4 +1,4 @@
-local V = 'v1.10.0'
+local V = 'v1.11.0'
 local PLACE_ID = 920587237 
 local MIN_PLAYERS_PREFERRED = 5 
 local MAX_PLAYERS_ALLOWED = 100
@@ -94,7 +94,7 @@ local function runBot()
         Tools.logWarning("Использован fallback для рекламного сообщения", {category = "AD"})
     end
 
-    Tools.randomDelay(50, 100)
+    Tools.randomDelay(3, 5)
 
     if not botState.running then
         Tools.logInfo("Остановлен пользователем", {category = "BOT"})

@@ -1339,10 +1339,11 @@ function Tools.autoReconnect()
 
     -- Симуляция реального клика мышью по кнопке через VirtualInputManager
     local function clickCoreGuiButton(btn)
-        local pos  = btn.AbsolutePosition
-        local size = btn.AbsoluteSize
-        local cx   = pos.X + size.X / 2
-        local cy   = pos.Y + size.Y / 2
+        local pos      = btn.AbsolutePosition
+        local size     = btn.AbsoluteSize
+        local guiInset = GuiService:GetGuiInset()
+        local cx       = pos.X + size.X / 2
+        local cy       = pos.Y + size.Y / 2 + guiInset.Y
 
         -- VirtualInputManager: реальная симуляция клика (работает с CoreGui)
         pcall(function()

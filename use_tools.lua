@@ -12,7 +12,7 @@ local Tools = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZare
 local Auth = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaxZarev/rblx/main/auth.lua?t=" .. tick()))()
 
 if _G.BotRunning then
-    warn("Скрипт уже запущен!")
+    warn("Скрипт уже запущен! v1.1.0")
     return
 end
 _G.BotRunning = true

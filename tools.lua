@@ -1402,7 +1402,21 @@ function Tools.autoReconnect()
         end)
     end
 
+    -- Проверка: виден ли экран ошибки прямо сейчас
+    local function isErrorVisible()
+        local visible = false
+        pcall(function()
+            local cg = game:GetService("CoreGui")
+            local promptGui = cg:FindFirstChild("RobloxPromptGui")
+            local overlay   = promptGui and promptGui:FindFirstChild("promptOverlay")
+            local errorPrompt = overlay and overlay:FindFirstChild("ErrorPrompt")
+            visible = errorPrompt ~= nil
+        end)
+        return visible
+    end
+
     -- Основной слушатель: срабатывает мгновенно при появлении экрана ошибки
+    -- После срабатывания запускает цикл повторных попыток пока ошибка висит
     pcall(function()
         GuiService.ErrorMessageChanged:Connect(function()
             local errorCode = GuiService:GetErrorCode()
@@ -1417,8 +1431,19 @@ function Tools.autoReconnect()
                 })
                 return
             end
-            task.wait(1.5)
-            tryClickReconnect()
+            task.spawn(function()
+                task.wait(1.5)
+                local attempts = 0
+                while isErrorVisible() and attempts < 20 do
+                    attempts = attempts + 1
+                    Tools.logWarning("Реконнект: попытка " .. attempts, {category = "RECONNECT"})
+                    tryClickReconnect()
+                    task.wait(3)
+                end
+                if attempts > 0 and not isErrorVisible() then
+                    Tools.logInfo("Реконнект: ошибка устранена", {category = "RECONNECT", attempts = attempts})
+                end
+            end)
         end)
     end)
 
@@ -1438,7 +1463,7 @@ function Tools.autoReconnect()
                                 button_name = obj.Name
                             })
                             clickCoreGuiButton(obj)
-                            task.wait(15)
+                            task.wait(5)
                         end
                     end
                 end

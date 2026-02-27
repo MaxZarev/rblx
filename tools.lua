@@ -1337,7 +1337,31 @@ function Tools.autoReconnect()
         [Enum.ConnectionError.DisconnectDuplicatePlayer]      = true,
     }
 
-    -- Попытка кликнуть кнопку Reconnect: сначала точный путь, затем сканирование
+    -- Симуляция реального клика мышью по кнопке через VirtualInputManager
+    local function clickCoreGuiButton(btn)
+        local pos  = btn.AbsolutePosition
+        local size = btn.AbsoluteSize
+        local cx   = pos.X + size.X / 2
+        local cy   = pos.Y + size.Y / 2
+
+        -- VirtualInputManager: реальная симуляция клика (работает с CoreGui)
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, true,  game, 1)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+        end)
+
+        -- firesignal (Synapse X / Wave)
+        pcall(function()
+            if firesignal then firesignal(btn.MouseButton1Click) end
+        end)
+
+        -- Fallback: стандартный fire
+        pcall(function() btn.MouseButton1Click:Fire() end)
+        pcall(function() btn:Activate() end)
+    end
+
+    -- Попытка найти и кликнуть кнопку Reconnect: сначала точный путь, затем сканирование
     local function tryClickReconnect()
         pcall(function()
             local cg = game:GetService("CoreGui")
@@ -1345,7 +1369,7 @@ function Tools.autoReconnect()
             -- Точный путь: RobloxPromptGui → promptOverlay → ErrorPrompt → ... → ReconnectButton
             local promptGui = cg:FindFirstChild("RobloxPromptGui")
             if promptGui then
-                local overlay = promptGui:FindFirstChild("promptOverlay")
+                local overlay    = promptGui:FindFirstChild("promptOverlay")
                 local errorPrompt = overlay and overlay:FindFirstChild("ErrorPrompt")
                 local buttonArea = errorPrompt and errorPrompt:FindFirstChild("ButtonArea", true)
                 if buttonArea then
@@ -1353,8 +1377,7 @@ function Tools.autoReconnect()
                         or buttonArea:FindFirstChild("Reconnect")
                     if btn then
                         Tools.logWarning("Реконнект: клик по ReconnectButton (точный путь)", {category = "RECONNECT"})
-                        btn.MouseButton1Click:Fire()
-                        pcall(function() btn:Activate() end)
+                        clickCoreGuiButton(btn)
                         return
                     end
                 end
@@ -1370,8 +1393,7 @@ function Tools.autoReconnect()
                             button_text = obj.Text or "",
                             button_name = obj.Name
                         })
-                        obj.MouseButton1Click:Fire()
-                        pcall(function() obj:Activate() end)
+                        clickCoreGuiButton(obj)
                         return
                     end
                 end
@@ -1414,9 +1436,8 @@ function Tools.autoReconnect()
                                 button_text = obj.Text or "",
                                 button_name = obj.Name
                             })
-                            obj.MouseButton1Click:Fire()
-                            pcall(function() obj:Activate() end)
-                            task.wait(5)
+                            clickCoreGuiButton(obj)
+                            task.wait(15)
                         end
                     end
                 end
